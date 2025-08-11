@@ -538,6 +538,14 @@ export const addKitchen = async(req,res,next)=>{
             return res.status(404).json({ message: "No matching restaurants found!" });
         }
 
+           const existingKitchen = await KITCHEN.findOne({ restaurantId });
+    if (existingKitchen) {
+      return res.status(400).json({
+        message: `Restaurant already has a kitchen ('${existingKitchen.name}'). Only one kitchen is allowed!`,
+      });
+    }
+
+
 
         for (const kitchen of kitchens) {
             const existKtichen = await KITCHEN.findOne({
