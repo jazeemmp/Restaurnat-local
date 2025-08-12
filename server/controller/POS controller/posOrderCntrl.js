@@ -265,17 +265,17 @@ export const createOrder = async (req, res, next) => {
          return res.status(400).json({ message: 'Customer are required for delivery' });
       }
 
-        if(!deliveryDetails.deliveryDate || !deliveryDetails.deliveryTime) {
-     return res.status(400).json({ message: 'Delivery date and time are required' });
-  }
+  //       if(!deliveryDetails.deliveryDate || !deliveryDetails.deliveryTime) {
+  //    return res.status(400).json({ message: 'Delivery date and time are required' });
+  // }
 
   if(!deliveryDetails.location){
     return res.status(400).json({ message: 'Delivery location is required' });
   }
 
       order.customerId = deliveryDetails.customerId;
-      order.deliveryDate = deliveryDetails.deliveryDate;
-      order.deliveryTime = deliveryDetails.deliveryTime;
+      order.deliveryDate = deliveryDetails.deliveryDate || Date.now()
+      order.deliveryTime = deliveryDetails.deliveryTime || Date.now()
       order.location = deliveryDetails.location;
     }
 
