@@ -158,6 +158,67 @@ export const createCustomerForPOS = async (req,res,next)=>{
     }
 }
 
+export const createCustomerForAdmin = async (req,res,next)=>{
+    try {
+
+        const { restaurantId, name, mobileNo, address, credit } = req.body;
+
+        const userId = req.user;
+        const user = await USER.findOne({ _id: userId })
+      if (!user) {
+        return res.status(400).json({ message: "User not found!" });
+      }
+        if (!restaurantId) {
+            return res.status(400).json({ message: "Restaurant Id is required!" });
+        }
+        if(!name){
+            return res.status(400).json({ message:'Customer name is required!'})
+        }
+        if(!mobileNo){
+            return res.status(400).json({ message:'Mobile number is required!'})
+        }
+
+        let filter = {};
+        if (user.role === "CompanyAdmin") {
+          filter = { _id: restaurantId, companyAdmin: user._id };
+        } else if (user.role === "User") {
+          filter = { _id: restaurantId };
+        } else {
+          return res.status(403).json({ message: "Unauthorized!" });
+        }
+
+        const restaurant = await RESTAURANT.findOne(filter);
+        if (!restaurant) {
+          return res.status(404).json({ message: "Restaurant not found!" });
+        }
+
+        const existingCustomer = await CUSTOMER.findOne({
+            restaurantId,
+            mobileNo
+        });
+
+    if (existingCustomer) {
+        return res.status(409).json({ success: false, message: 'Customer with this mobile number already exists' });
+      }
+
+    const customer =   await CUSTOMER.create({
+        restaurantId,
+        name,
+        mobileNo,
+        address,
+         credit: parseFloat((credit ?? 0).toFixed(2)),
+        createdById:user._id,
+        createdBy:user.name,
+      
+      })
+
+        return res.status(200).json({ data: customer })
+        
+    } catch (err) {
+        next(err)
+    }
+}
+
 export const getCustomersForPOS = async (req, res, next) => {
   try {
     const { restaurantId } = req.params;
@@ -230,7 +291,137 @@ export const getCustomersForPOS = async (req, res, next) => {
   }
 };
 
+export const getCustomersForAdmin = async (req, res, next) => {
+  try {
+    const { restaurantId } = req.params;
+    const userId = req.user;
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
 
+    //  Validate user
+    const user = await USER.findOne({ _id: userId });
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" });
+    }
+
+    if (!restaurantId) {
+      return res.status(400).json({ message: "Restaurant Id is required!" });
+    }
+
+    //  Total customer count
+    const totalCount = await CUSTOMER.countDocuments({ restaurantId });
+
+       const creditResult = await CUSTOMER.aggregate([
+      { $group: { _id: null, totalCredit: { $sum: "$credit" } } }
+    ]);
+    const totalCredit = creditResult.length > 0 ? creditResult[0].totalCredit : 0;
+
+    //  Get paginated customers
+    const customers = await CUSTOMER.find({ restaurantId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Aggregate total orders and total spent
+     const customerIds = customers.map(c => c._id);
+
+    // Aggregate only total orders
+    const orderStats = await ORDER.aggregate([
+      {
+        $match: {
+          customerId: { $in: customerIds },
+          status: "Completed"
+        }
+      },
+      {
+        $group: {
+          _id: "$customerId",
+          totalOrders: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Map totalOrders by customerId
+    const orderMap = {};
+    orderStats.forEach(stat => {
+      orderMap[stat._id.toString()] = stat.totalOrders;
+    });
+
+    // Merge customer data
+    const customerSummary = customers.map(c => ({
+      ...c._doc,
+      totalOrders: orderMap[c._id.toString()] || 0,
+    }));
+
+    return res.status(200).json({
+      data: customerSummary,
+      totalCount,
+      totalCredit,
+      page,
+      limit
+    });
+
+
+  } catch (err) {
+    console.error("Error in getCustomersForPOS:", err);
+    next(err);
+  }
+};
+
+export const customerDelete = async (req, res, next) => {
+  try {
+    const { customerId } = req.params;
+    const userId = req.user;
+
+    // Validate user
+    const user = await USER.findOne({ _id: userId });
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" });
+    }
+
+    // Check if customer exists
+    const customer = await CUSTOMER.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Check orders reference
+    const orderRef = await ORDER.exists({ customerId });
+    if (orderRef) {
+      return res.status(400).json({
+        message: "Cannot delete customer because they have existing orders",
+      });
+    }
+
+    // Check payment records reference
+    const paymentRef = await PAYMENT.exists({ customerId });
+    if (paymentRef) {
+      return res.status(400).json({
+        message: "Cannot delete customer because they have payment records",
+      });
+    }
+
+    // Check transactions reference
+    // const transactionRef = await TRANSACTION.exists({ customerId });
+    // if (transactionRef) {
+    //   return res.status(400).json({
+    //     message: "Cannot delete customer because they have transactions",
+    //   });
+    // }
+
+    // If no references found, proceed with deletion
+    await CUSTOMER.findByIdAndDelete(customerId);
+
+    return res.status(200).json({
+      message: "Customer deleted successfully",
+    });
+
+  } catch (err) {
+    console.error("Error in customerDelete:", err);
+    next(err);
+  }
+};
 
   export const updateCustomerforPOS = async (req, res, next) => {
     try {

@@ -505,8 +505,6 @@ if (shouldSendKOT) {
         return i.preparationTime || 0;
       })
     );
-    console.log(maxPrepTime,'preperation time')
-    
 
     const kotData = {
       restaurantId,
@@ -514,8 +512,8 @@ if (shouldSendKOT) {
       tableId,
       orderType: ctypeName,
       items,
-      ticketNo,
-      orderNo,
+      ticketNo:order.ticketNo,
+      orderNo:order.orderNo,
       orderId: order._id,
       order_id: order.order_id,
       status: 'Pending',

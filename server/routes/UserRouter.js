@@ -13,7 +13,7 @@ import {CreateMenuType,getAllMenuTypes,updateMenuTypes,deleteMenuTypes } from '.
 import { createAddOns,deleteAddOn,getAllAddOns,updateAddOns } from '../controller/foodController/AddOnsCntrl.js';
 import { createFood,deleteFood,getAllFoodbyRestaurat,getOneFood,updateFood } from '../controller/foodController/mainFood.js'
 import {getAllByCategoryForPOS,getAllComboForPOS,getAllFoodForPOS,getComboForPOS,getCourseForPOS,getMenusItemsForPOS,getOneComboForPOS } from '../controller/POS controller/menuCntrl.js';
-import {  getFloorsForPOS,getTablesForPOS ,createCustomerForPOS,getCustomerTypesForPOS,getCustomersForPOS,updateCustomerforPOS, payCustomerDue, getCustomerOrderHistory, getCustomerDueHistory, generateCustomerDueHistoryPDF,} from '../controller/POS controller/posBasicCntrl.js';
+import {  getFloorsForPOS,getTablesForPOS ,createCustomerForPOS,getCustomerTypesForPOS,getCustomersForPOS,updateCustomerforPOS, payCustomerDue, getCustomerOrderHistory, getCustomerDueHistory, generateCustomerDueHistoryPDF, createCustomerForAdmin, getCustomersForAdmin, customerDelete,} from '../controller/POS controller/posBasicCntrl.js';
 import {createOrder,getOneOrderDetails,getTodayOrdersForPOS,posOrderBilling,cancelOrder, changeTable, printDinInCustomerReceipt, rePrintForTakeHome, rePrintDinIn } from '../controller/POS controller/posOrderCntrl.js';
 import { createCompo,getAllCombo,deleteCombo,getOneCombo,updateCombo} from '../controller/foodController/comboCntrl.js'
 import { getQuickViewDashboard,getSalesOverview ,getPaymentOverview,getOrderSummary,getTopSellingItems,getLatestCompletedOrders} from '../controller/DashbordController/dashbordCntrl.js'
@@ -149,8 +149,11 @@ router.get('/pos-tables/:restaurantId',VerifyToken,checkOfflinePermission('Sale'
 
 //pos-customer
 router.post('/pos-customer',VerifyToken,checkOfflinePermission('Sale'),createCustomerForPOS);
+router.post('/customer',VerifyToken,checkOfflinePermission('Admin'),createCustomerForAdmin);
 router.get('/pos-customer/:restaurantId',VerifyToken,checkOfflinePermission('Sale'),getCustomersForPOS);
-router.put('/pos-customer',VerifyToken,checkOfflinePermission('Sale'),updateCustomerforPOS);
+router.get('/customer/:restaurantId',VerifyToken,checkOfflinePermission('Admin'),getCustomersForAdmin);
+router.delete('/pos-customer/:customerId',VerifyToken,checkOfflinePermission('Admin'),customerDelete);
+router.put('/pos-customer',VerifyToken,checkOfflinePermission('Admin'),updateCustomerforPOS);
 router.get('/pos-customerTypes/:restaurantId',VerifyToken,checkOfflinePermission('Sale'),getCustomerTypesForPOS)
 router.post('/pos-customer/due',VerifyToken,checkOfflinePermission('Admin'),payCustomerDue);
 router.get('/customer/history',VerifyToken,checkOfflinePermission('Admin'),getCustomerOrderHistory);
