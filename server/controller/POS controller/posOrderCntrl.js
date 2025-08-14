@@ -273,8 +273,8 @@ export const createOrder = async (req, res, next) => {
   }
 
       order.customerId = deliveryDetails.customerId;
-      order.deliveryDate = deliveryDetails.deliveryDate || Date.now()
-      order.deliveryTime = deliveryDetails.deliveryTime || Date.now()
+      order.deliveryDate = deliveryDetails.deliveryDate || null
+      order.deliveryTime = deliveryDetails.deliveryTime || null
       order.location = deliveryDetails.location;
     }
 
