@@ -200,7 +200,6 @@ export const createOrder = async (req, res, next) => {
 
           const portionData = food.portions?.find(p => p.name === item.portion);
           const conversion = portionData?.conversion || 1;
-
           return {
             foodId: item.foodId,
             foodName: food.foodName,
@@ -281,7 +280,10 @@ export const createOrder = async (req, res, next) => {
 
     if (isAdditionalOrder) {
       order.items.push(...processedItems);
-      order.totalAmount += processedItems.reduce((sum, item) => sum + item.total, 0);
+      // order.totalAmount += processedItems.reduce((sum, item) => sum + item.total, 0);
+      order.totalAmount += req.body.total;
+      order.subTotal += req.body.subTotal
+      order.vat +=req.body.vat;
     } else {
       order.items = processedItems;
     }
@@ -718,6 +720,7 @@ printer.bold(false);
 
 export const printTakeawayCustomerReceipt = async (order, printerIp = null) => {
   try {
+    console.log(order,'order vannu')
     if (!printerIp)  throw new Error('No printer IP provided');
 
     const popOrder = await ORDER.findById(order._id)
@@ -833,7 +836,7 @@ printer.drawLine();
 // Totals (right aligned)
 const subTotalRaw = popOrder.subTotal || 0;
 const vatRaw = popOrder.vat || 0;
-const totalBeforeVAT = (subTotalRaw - vatRaw).toFixed(2).padStart(12, " ");
+const totalBeforeVAT = subTotalRaw.toFixed(2).padStart(12, " ");
 const vat = vatRaw.toFixed(2).padStart(12, " ");
 const grandTotal = (popOrder.totalAmount || total).toFixed(2).padStart(12, " ");
 
@@ -1003,7 +1006,7 @@ printer.drawLine();
 // Totals (right aligned)
 const subTotalRaw = popOrder.subTotal || 0;
 const vatRaw = popOrder.vat || 0;
-const totalBeforeVAT = (subTotalRaw - vatRaw).toFixed(2).padStart(12, " ");
+const totalBeforeVAT = subTotalRaw.toFixed(2).padStart(12, " ");
 const vat = vatRaw.toFixed(2).padStart(12, " ");
 const grandTotal = (popOrder.totalAmount || total).toFixed(2).padStart(12, " ");
 
@@ -1270,7 +1273,7 @@ printer.drawLine()
    // Totals (right aligned)
 const subTotalRaw = popOrder.subTotal || 0;
 const vatRaw = popOrder.vat || 0;
-const totalBeforeVAT = (subTotalRaw - vatRaw).toFixed(2).padStart(12, " ");
+const totalBeforeVAT = subTotalRaw.toFixed(2).padStart(12, " ");
 const vat = vatRaw.toFixed(2).padStart(12, " ");
 const grandTotal = (popOrder.totalAmount || total).toFixed(2).padStart(12, " ");
 

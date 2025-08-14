@@ -369,6 +369,7 @@ export const getCustomersForAdmin = async (req, res, next) => {
   }
 };
 
+
 export const customerDelete = async (req, res, next) => {
   try {
     const { customerId } = req.params;
