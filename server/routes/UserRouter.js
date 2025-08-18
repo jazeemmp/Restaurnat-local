@@ -360,7 +360,6 @@ router.get('/vat/pdf',VerifyToken,checkOfflinePermission('Reports'),generateVATR
 router.get('/vat/excel',VerifyToken,checkOfflinePermission('Reports'),generateVATReportExcel);
 
 
-
 //partner
 router.post('/partner',VerifyToken,checkOfflinePermission('Admin'),addPartner)
 router.put('/partner',VerifyToken,checkOfflinePermission('Admin'),updatePartner)
