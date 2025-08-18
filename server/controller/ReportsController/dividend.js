@@ -488,3 +488,203 @@ export const getAvailablePartnerDividends = async (req, res, next) => {
 };
 
 
+// export const getPartnerDividendHistory = async (req, res, next) => {
+//   try {
+//     const { fromDate, toDate, search = '' } = req.query;
+//     const limit = parseInt(req.query.limit) || 20;
+//     const page = parseInt(req.query.page) || 1;
+//     const skip = (page - 1) * limit;
+
+//     const matchStage = {
+//       referenceType: "Dividend"   // only dividends
+//     };
+
+//     if (fromDate && toDate) {
+//       const start = new Date(fromDate);
+//       const end = new Date(toDate);
+//       end.setHours(23, 59, 59, 999);
+//       matchStage.createdAt = { $gte: start, $lte: end };
+//     }
+
+//     if (search) {
+//       matchStage.$or = [
+//         { referenceId: { $regex: search, $options: 'i' } },
+//         { description: { $regex: search, $options: 'i' } },
+//         { createdBy: { $regex: search, $options: 'i' } }
+//       ];
+//     }
+
+//     const pipeline = [
+//       { $match: matchStage },
+//       { $sort: { createdAt: -1 } }, // latest first
+
+//       // Join account info
+//       {
+//         $lookup: {
+//           from: "accounts",
+//           localField: "accountId",
+//           foreignField: "_id",
+//           as: "accountInfo"
+//         }
+//       },
+//       { $unwind: { path: "$accountInfo", preserveNullAndEmptyArrays: true } },
+
+//       // Join payment method
+//       {
+//         $lookup: {
+//           from: "accounts",
+//           localField: "paymentType",
+//           foreignField: "_id",
+//           as: "paymentTypeInfo"
+//         }
+//       },
+//       { $unwind: { path: "$paymentTypeInfo", preserveNullAndEmptyArrays: true } },
+
+//       // Join partner info via PARTNER_DIVIDEND_PAYOUT
+//       {
+//         $lookup: {
+//           from: "partner_dividend_payouts",
+//           localField: "referenceId",
+//           foreignField: "referenceId",
+//           as: "payoutInfo"
+//         }
+//       },
+//       { $unwind: { path: "$payoutInfo", preserveNullAndEmptyArrays: true } },
+
+//       {
+//         $project: {
+//           _id: 1,
+//           referenceId: 1,
+//           amount: 1,
+//           type: 1,
+//           description: 1,
+//           createdAt: 1,
+//           createdBy: 1,
+//           account: {
+//             name: "$accountInfo.accountName",
+//             type: "$accountInfo.accountType"
+//           },
+//           paymentMethod: {
+//             $ifNull: ["$paymentTypeInfo.accountName", null]
+//           },
+//           partnerId: "$payoutInfo.partnerId",
+//           partnerName: "$payoutInfo.name",
+//           periodFrom: "$payoutInfo.periodFrom",
+//           periodTo: "$payoutInfo.periodTo",
+//           percentage: "$payoutInfo.percentage",
+//           eligibleAmount: "$payoutInfo.eligibleAmount",
+//           note: "$payoutInfo.note"
+//         }
+//       },
+
+//       {
+//         $facet: {
+//           data: [{ $skip: skip }, { $limit: limit }],
+//           totalCount: [{ $count: "count" }]
+//         }
+//       }
+//     ];
+
+//     const result = await TRANSACTION.aggregate(pipeline);
+
+//     const final = {
+//       data: result[0]?.data || [],
+//       totalCount: result[0]?.totalCount[0]?.count || 0
+//     };
+
+//     return res.status(200).json({
+//       data: final.data,
+//       totalCount: final.totalCount,
+//       page,
+//       limit
+//     });
+
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+export const getPartnerDividendHistory = async (req, res, next) => {
+  try {
+    const { fromDate, toDate, search = '' } = req.query;
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const matchStage = {};
+
+    if (fromDate && toDate) {
+      const start = new Date(fromDate);
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      matchStage.createdAt = { $gte: start, $lte: end };
+    }
+
+    if (search) {
+      matchStage.$or = [
+        { referenceId: { $regex: search, $options: "i" } },
+        { note: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+
+      // Join with transactions if you need account/payment details
+      {
+        $lookup: {
+          from: "transactions",
+          localField: "referenceId",
+          foreignField: "referenceId",
+          as: "transactionInfo"
+        }
+      },
+      { $unwind: { path: "$transactionInfo", preserveNullAndEmptyArrays: true } },
+
+      {
+        $project: {
+          _id: 1,
+          partnerId: 1,
+          partnerName: 1,
+          // referenceId: 1,
+          payoutAmount: 1,
+          percentage: 1,
+          eligibleAmount: 1,
+          periodFrom: 1,
+          periodTo: 1,
+          note: 1,
+          createdAt: 1,
+          createdBy: 1,
+          account: {
+            name: "$transactionInfo.accountName",
+            type: "$transactionInfo.accountType"
+          },
+          paymentMethod: "$transactionInfo.paymentType"
+        }
+      },
+
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }]
+        }
+      }
+    ];
+
+    const result = await PARTNER_DIVIDEND_PAYOUT.aggregate(pipeline);
+
+    const final = {
+      data: result[0]?.data || [],
+      totalCount: result[0]?.totalCount[0]?.count || 0
+    };
+
+    return res.status(200).json({
+      data: final.data,
+      totalCount: final.totalCount,
+      page,
+      limit
+    });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -5,6 +5,7 @@ import TRANSACTION from '../../model/transaction.js';
 import { generateUniqueRefId } from '../POS controller/posOrderCntrl.js'
 import PURCHASE from '../../model/purchase.js'
 import SUPPLIER from '../../model/supplier.js'
+import INGREDIENT from '../../model/ingredients.js'
 import mongoose from 'mongoose';
 
  
@@ -67,6 +68,43 @@ export const createPurchase = async (req, res, next) => {
 
     const refId = await generateUniqueRefId();
 
+        const processedItems = [];
+    for (const item of items) {
+      let ingredientId = item.ingredientId;
+
+      // If ingredientId not provided, try to create new ingredient
+      if (!ingredientId && item.ingredientName && item.purchaseUnit) {
+        let existingIngredient = await INGREDIENT.findOne({
+          ingredient: item.ingredientName.trim(),
+        });
+
+        if (!existingIngredient) {
+          existingIngredient = await INGREDIENT.create({
+            ingredient: item.ingredientName.trim(),
+            purchaseUnit: item.purchaseUnit,
+            createdById: user._id,
+            createdBy: user.name,
+          });
+        }
+
+        ingredientId = existingIngredient._id;
+      }
+      
+      if (!ingredientId) {
+        return res.status(400).json({
+          message: `Ingredient is required for item: ${item.ingredientName || "unknown"}`,
+        });
+      }
+
+      processedItems.push({
+        ingredientId,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total,
+        vatAmount: item.vatAmount,
+        baseTotal: item.baseTotal,
+      });
+    }
     // 1. Save Purchase
     const purchase = await PURCHASE.create({
       date,
@@ -74,14 +112,7 @@ export const createPurchase = async (req, res, next) => {
       supplierId,
       paymentModeId,
       accountId : account._id,
-      items: items.map((item) => ({
-        ingredientId: item.ingredientId,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.total,
-        vatAmount: item.vatAmount,
-        baseTotal:item.baseTotal,
-      })),
+      items: processedItems,
       totalAmount,
       totalBeforeVAT :baseTotal,
       note,
@@ -378,6 +409,43 @@ export const updatePurchase = async (req, res, next) => {
 
     const refId =  await generateUniqueRefId();
 
+       const processedItems = [];
+    for (const item of items) {
+      let ingredientId = item.ingredientId;
+
+      if (!ingredientId && item.ingredientName && item.purchaseUnit) {
+        let existingIngredient = await INGREDIENT.findOne({
+          ingredient: item.ingredientName.trim(),
+        });
+
+        if (!existingIngredient) {
+          existingIngredient = await INGREDIENT.create({
+            ingredient: item.ingredientName.trim(),
+            purchaseUnit: item.purchaseUnit,
+            createdById: user._id,
+            createdBy: user.name,
+          });
+        }
+
+        ingredientId = existingIngredient._id;
+      }
+
+      if (!ingredientId) {
+        return res.status(400).json({
+          message: `Ingredient is required for item: ${item.ingredientName || "unknown"}`
+        });
+      }
+
+      processedItems.push({
+        ingredientId,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total,
+        vatAmount: item.vatAmount,
+        baseTotal: item.baseTotal,
+      });
+    }
+
     // Update purchase with new data
     const updatedPurchase = await PURCHASE.findByIdAndUpdate(
       purchaseId,
@@ -387,14 +455,7 @@ export const updatePurchase = async (req, res, next) => {
         supplierId,
         paymentModeId,
         accountId: account._id,
-        items: items.map((item) => ({
-          ingredientId: item.ingredientId,
-          price: item.price,
-          quantity: item.quantity,
-          total: item.total,
-          vatAmount: item.vatAmount,
-          baseTotal:item.baseTotal,
-        })),
+        items: processedItems ,
         totalAmount,
         totalBeforeVAT:baseTotal,
         vatTotal,

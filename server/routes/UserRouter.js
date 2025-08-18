@@ -33,7 +33,7 @@ import {  getKOTTickets } from '../controller/kithchenPanel/kitchenCntrl.js';
 import { assignRiderForOut, completeHomeDelivery, createRider, deleteRider, getDeliveredHomeDelivery, getOutForHomeDelivery, getPlacedHomeDelivery, getRiderCompleted, getRiderOngoingOrders, getRiders, getWaitingForHomeDelivery, markOrderReadyForPickup, updateRider } from '../controller/Delivery/homeDeliveryCntrl.js';
 import { generateVATReportExcel, generateVATReportPDF, getProfitAndLossReport, getVATReport, profitAndLossExcel, profitandLossPdf, vatSummary } from '../controller/ReportsController/otherReports.js';
 import { getBillSettings, updateBillSettings } from '../controller/Settings/Bill-settings.js';
-import { addPartner, deletePartner, getAvailablePartnerDividends, getDividendSharingReport, getPartners, takePartnerDividend, updatePartner } from '../controller/ReportsController/dividend.js';
+import { addPartner, deletePartner, getAvailablePartnerDividends, getDividendSharingReport, getPartnerDividendHistory, getPartners, takePartnerDividend, updatePartner } from '../controller/ReportsController/dividend.js';
 const router = express.Router();
 
 
@@ -370,6 +370,8 @@ router.delete('/partner/:partnerId',VerifyToken,checkOfflinePermission('Admin'),
 //dividend report
 router.get('/dividend',VerifyToken,checkOfflinePermission('Admin'),getDividendSharingReport);
 router.post('/dividend/pay',VerifyToken,checkOfflinePermission('Admin'),takePartnerDividend)
-router.get('/dividend/available',VerifyToken,checkOfflinePermission('Admin'),getAvailablePartnerDividends)
+router.get('/dividend/available',VerifyToken,checkOfflinePermission('Admin'),getAvailablePartnerDividends);
+router.get('/dividend/history',VerifyToken,checkOfflinePermission("Admin"),getPartnerDividendHistory)
+
 
 export default router;
