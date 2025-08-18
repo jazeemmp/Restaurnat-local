@@ -11,159 +11,263 @@ import PAYMENT from '../../model/paymentRecord.js'
 import { getIO  } from "../../config/socket.js";
 import ACCOUNTS from '../../model/account.js'
 import TRANSACTION from '../../model/transaction.js'
+import PURCHASE from '../../model/purchase.js';
+import EXPENSE from '../../model/expense.js'
 
 
 
+// export const getQuickViewDashboard = async(req,res,next)=>{
+//     try {
 
-export const getQuickViewDashboard = async(req,res,next)=>{
-    try {
+//           const { fromDate, toDate } = req.params;
 
-          const { fromDate, toDate } = req.params;
+//           console.log(fromDate,toDate,'form date and to date');
 
-          console.log(fromDate,toDate,'form date and to date');
+//         const userId = req.user 
 
-        const userId = req.user 
+//         const user = await USER.findOne({ _id: userId }).lean();
+//         if (!user) return res.status(400).json({ message: "User not found" });
 
-        const user = await USER.findOne({ _id: userId }).lean();
-        if (!user) return res.status(400).json({ message: "User not found" });
+//         // 1. Get all completed orders in the date range
 
-        // 1. Get all completed orders in the date range
-
-             const start = new Date(fromDate);
-            const end = new Date(toDate);
-            // end.setHours(23, 59, 59, 999);
+//              const start = new Date(fromDate);
+//             const end = new Date(toDate);
+//             // end.setHours(23, 59, 59, 999);
     
 
-    const completedOrders = await ORDER.find({
-        status: "Completed",
-        createdAt: { $gte: start, $lte: end }
-        }).select("_id customerTypeId");
+//     const completedOrders = await ORDER.find({
+//         status: "Completed",
+//         createdAt: { $gte: start, $lte: end }
+//         }).select("_id customerTypeId");
 
        
-      const orderIds = completedOrders.map(order => order._id);
+//       const orderIds = completedOrders.map(order => order._id);
 
-    // 2. Create a mapping of customerTypeId => readable name
-    const customerTypes = await CUSTOMER_TYPE.find();
-    const customerTypeMap = new Map();
-    customerTypes.forEach(ct => {
-      customerTypeMap.set(ct._id.toString(), ct.type); // e.g., "Dine-In"
-    });
+//     // 2. Create a mapping of customerTypeId => readable name
+//     const customerTypes = await CUSTOMER_TYPE.find();
+//     const customerTypeMap = new Map();
+//     customerTypes.forEach(ct => {
+//       customerTypeMap.set(ct._id.toString(), ct.type); // e.g., "Dine-In"
+//     });
 
 
-  // 3. Aggregate total sales by customerType using Payment
+//   // 3. Aggregate total sales by customerType using Payment
                     
-    const payments = await PAYMENT.aggregate([
-      {
-        $match: {
-          orderId: { $in: orderIds },
-          createdAt: { $gte: start, $lte: end }
-        }
-      },
-      {
-        $lookup: {
-          from: "orders",
-          localField: "orderId",
-          foreignField: "_id",
-          as: "orderInfo"
-        }
-      },
-      { $unwind: "$orderInfo" },
-      {
-        $group: {
-          _id: "$orderInfo.customerTypeId",
-          total: { $sum: "$grandTotal" },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
+//     const payments = await PAYMENT.aggregate([
+//       {
+//         $match: {
+//           orderId: { $in: orderIds },
+//           createdAt: { $gte: start, $lte: end }
+//         }
+//       },
+//       {
+//         $lookup: {
+//           from: "orders",
+//           localField: "orderId",
+//           foreignField: "_id",
+//           as: "orderInfo"
+//         }
+//       },
+//       { $unwind: "$orderInfo" },
+//       {
+//         $group: {
+//           _id: "$orderInfo.customerTypeId",
+//           total: { $sum: "$grandTotal" },
+//           count: { $sum: 1 }
+//         }
+//       }
+//     ]);
 
 
-    let totalSales = 0;
-    let totalOrders = 0;
+//     let totalSales = 0;
+//     let totalOrders = 0;
 
-    const typeWiseData = new Map();
+//     const typeWiseData = new Map();
 
-    // Store actual results in map first
-    payments.forEach((p) => {
-      const type = customerTypeMap.get(p._id.toString()) || "Unknown";
-      typeWiseData.set(type, {
-        sales: parseFloat(p.total.toFixed(2)),
-        orders: p.count,
-      });
+//     // Store actual results in map first
+//     payments.forEach((p) => {
+//       const type = customerTypeMap.get(p._id.toString()) || "Unknown";
+//       typeWiseData.set(type, {
+//         sales: parseFloat(p.total.toFixed(2)),
+//         orders: p.count,
+//       });
 
-      totalSales += p.total;
-      totalOrders += p.count;
-    });
+//       totalSales += p.total;
+//       totalOrders += p.count;
+//     });
 
-    const breakdown = [];
+//     const breakdown = [];
 
-    // Now make sure all customer types are included (even if 0)
-    customerTypeMap.forEach((type, id) => {
-      if (typeWiseData.has(type)) {
-        breakdown.push({
-          name: type,
-          sales: typeWiseData.get(type).sales,
-          orders: typeWiseData.get(type).orders,
-        });
-      } else {
-        breakdown.push({
-          name: type,
-          sales: 0,
-          orders: 0,
-        });
-      }
-    });
-
-
-        // 4. Get total expenses (debit only)
-    const debitAgg = await TRANSACTION.aggregate([
-      {
-        $match: {
-          type: "Debit",
-          createdAt: { $gte: start, $lte: end },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalDebit: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    const totalDebit = debitAgg[0]?.totalDebit || 0;
-    const netProfit = totalSales - totalDebit;
+//     // Now make sure all customer types are included (even if 0)
+//     customerTypeMap.forEach((type, id) => {
+//       if (typeWiseData.has(type)) {
+//         breakdown.push({
+//           name: type,
+//           sales: typeWiseData.get(type).sales,
+//           orders: typeWiseData.get(type).orders,
+//         });
+//       } else {
+//         breakdown.push({
+//           name: type,
+//           sales: 0,
+//           orders: 0,
+//         });
+//       }
+//     });
 
 
+//         // 4. Get total expenses (debit only)
+//     const debitAgg = await TRANSACTION.aggregate([
+//       {
+//         $match: {
+//           type: "Debit",
+//           createdAt: { $gte: start, $lte: end },
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: null,
+//           totalDebit: { $sum: "$amount" },
+//         },
+//       },
+//     ]);
 
-    // Add totals first
-    const data = [
+//     const totalDebit = debitAgg[0]?.totalDebit || 0;
+//     const netProfit = totalSales - totalDebit;
+
+
+
+//     // Add totals first
+//     const data = [
     
+//       {
+//         name: "Total Sales",
+//         sales: parseFloat(totalSales.toFixed(2)),
+//         orders: null,
+//       },
+//       {
+//         name: "Net Profit",
+//         sales: parseFloat(netProfit.toFixed(2)),
+//         orders: null,
+//       },
+//       {
+//         name: "Total Orders",
+//         sales: null,
+//         orders: totalOrders,
+//       },
+    
+//       ...breakdown,
+//     ]; 
+
+//    return res.status(200).json(data);
+        
+//     } catch (err) {
+//         next(err)
+//     }
+// }
+export const getQuickViewDashboard = async (req, res, next) => {
+  try {
+    const user = await USER.findById(req.user).lean();
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" });
+    }
+
+    const { fromDate, toDate } = req.query;
+    const start = fromDate ? new Date(fromDate) : new Date("2000-01-01");
+    const end = toDate ? new Date(toDate) : new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const totalOrders = await ORDER.countDocuments({
+  status: "Completed",
+  createdAt: { $gte: start, $lte: end }
+});
+
+    // === Sales (Revenue) ===
+    const paymentsAgg = await PAYMENT.aggregate([
+      { $match: { createdAt: { $gte: start, $lte: end } } },
+      { $group: { _id: null, totalBeforeVAT: { $sum: "$beforeVat" } } }
+    ]);
+    const revenue = paymentsAgg[0]?.totalBeforeVAT || 0;
+
+    // === Purchases (COGS) ===
+    const purchasesAgg = await PURCHASE.aggregate([
+      { $match: { createdAt: { $gte: start, $lte: end } } },
+      { $group: { _id: null, totalCOGS: { $sum: "$totalBeforeVAT" } } }
+    ]);
+    const totalPurchase = purchasesAgg[0]?.totalCOGS || 0;
+
+    // === Expenses ===
+    const expenseDocs = await EXPENSE.find({
+      createdAt: { $gte: start, $lte: end }
+    }).lean();
+
+    let totalExpenses = 0;
+    let expenseBreakdown = {};
+
+    for (const exp of expenseDocs) {
+      for (const item of exp.expenseItems) {
+        const account = await ACCOUNTS.findById(item.accountId).lean();
+        if (!account) continue;
+
+        const accountName = account.accountName;
+        const amount = Number(item.baseTotal) || 0;
+
+        if (!expenseBreakdown[accountName]) {
+          expenseBreakdown[accountName] = 0;
+        }
+        expenseBreakdown[accountName] += amount;
+        totalExpenses += amount;
+      }
+    }
+
+    // === Calculations ===
+    const grossProfit = revenue - totalPurchase;
+    const netProfit = grossProfit - totalExpenses;
+
+    // === Response in requested format ===
+    const data = [
       {
         name: "Total Sales",
-        sales: parseFloat(totalSales.toFixed(2)),
+        sales: revenue ? parseFloat(revenue.toFixed(2)) : 0,
+        orders: null,
+      },
+      {
+        name: "Total Purchase",
+        sales: totalPurchase ? parseFloat(totalPurchase.toFixed(2)) : 0,
+        orders: null,
+      },
+      {
+        name: "Total Expenses",
+        sales: totalExpenses ? parseFloat(totalExpenses.toFixed(2)) : 0,
+        orders: null,
+      },
+      {
+        name: "Gross Profit",
+        sales: grossProfit ? parseFloat(grossProfit.toFixed(2)) : 0,
         orders: null,
       },
       {
         name: "Net Profit",
-        sales: parseFloat(netProfit.toFixed(2)),
+        sales: netProfit ? parseFloat(netProfit.toFixed(2)) : 0,
         orders: null,
       },
-      {
-        name: "Total Orders",
-        sales: null,
-        orders: totalOrders,
-      },
-    
-      ...breakdown,
-    ]; 
+            {
+          name: "Total Orders",
+          sales: null,
+          orders: totalOrders || 0,
+        }
+    ];
 
-   return res.status(200).json(data);
-        
-    } catch (err) {
-        next(err)
-    }
-}
+    return res.status(200).json({
+      fromDate,
+      toDate,
+      data,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
 
 
 

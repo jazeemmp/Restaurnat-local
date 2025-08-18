@@ -271,6 +271,21 @@ export const takePartnerDividend = async (req, res, next) => {
       return res.status(400).json({ message: "Amount must be greater than 0" });
     }
 
+            // === Prevent overlapping periods for this partner ===
+        // const overlapping = await PARTNER_DIVIDEND_PAYOUT.findOne({
+        //   partnerId: partner._id,
+        //   status: "Paid",
+        //   $or: [
+        //     { periodFrom: { $lte: end }, periodTo: { $gte: start } }  // overlap condition
+        //   ]
+        // });
+
+        // if (overlapping) {
+        //   return res.status(400).json({
+        //     message: `Dividend already paid for overlapping period: ${overlapping.periodFrom.toISOString().slice(0,10)} to ${overlapping.periodTo.toISOString().slice(0,10)}`
+        //   });
+        // }
+
 
     // SALES (Revenue) from PAYMENT_RECORD: use beforeVat
     const paymentsAgg = await PAYMENT_RECORD.aggregate([
@@ -311,17 +326,17 @@ export const takePartnerDividend = async (req, res, next) => {
     const eligibleAmount = Number(((netProfit * (partner.percentage || 0)) / 100).toFixed(2));
 
     // === 3) Check how much the partner already took in this period ===
-    const paidAgg = await PARTNER_DIVIDEND_PAYOUT.aggregate([
-      {
-        $match: {
-          partnerId: partner._id,
-          periodFrom: { $eq: start },
-          periodTo: { $eq: end },
-          status: "Paid",
-        }
-      },
-      { $group: { _id: null, taken: { $sum: "$amount" } } }
-    ]);
+   const paidAgg = await PARTNER_DIVIDEND_PAYOUT.aggregate([
+  {
+    $match: {
+      partnerId: partner._id,
+      status: "Paid",
+      periodFrom: { $lte: end },
+      periodTo: { $gte: start }
+    }
+  },
+  { $group: { _id: null, taken: { $sum: "$amount" } } }
+]);
     const alreadyTaken = paidAgg[0]?.taken || 0;
 
     const available = Number((eligibleAmount - alreadyTaken).toFixed(2));
@@ -404,6 +419,8 @@ export const getAvailablePartnerDividends = async (req, res, next) => {
     const end = new Date(toDate);
     end.setHours(23, 59, 59, 999);
 
+    
+
     // === 1) SALES from PAYMENT_RECORD
     const paymentsAgg = await PAYMENT_RECORD.aggregate([
       { $match: { createdAt: { $gte: start, $lte: end } } },
@@ -430,50 +447,47 @@ export const getAvailablePartnerDividends = async (req, res, next) => {
     const grossProfit = revenue - cogs;
     const netProfit = grossProfit - totalExpenses;
 
-    if (netProfit <= 0) {
-      return res.status(200).json({
-        message: "No dividend available for the selected period",
-      });
-    }
+    // if (netProfit <= 0) {
+    //   return res.status(200).json({
+    //     message: "No dividend available for the selected period",
+    //   });
+    // }
 
+  
     // === 4) Get all partners
     const partners = await PARTNER.find().lean();
 
-    // === 5) Get payouts already made during this period
-    const payouts = await PARTNER_DIVIDEND_PAYOUT.aggregate([
-      {
-        $match: {
-          periodFrom: { $eq: start },
-          periodTo: { $eq: end },
-          status: "Paid"
-        }
-      },
-      {
-        $group: {
-          _id: "$partnerId",
-          totalPaid: { $sum: "$amount" }
-        }
-      }
-    ]);
-    const paidMap = {};
-    payouts.forEach(p => {
-      paidMap[p._id.toString()] = p.totalPaid;
-    });
-
-    // === 6) Build result per partner
-    const data = partners.map(partner => {
+    // === 5) Build result per partner
+    const data = [];
+    for (const partner of partners) {
       const eligible = Number(((netProfit * (partner.percentage || 0)) / 100).toFixed(2));
-      const alreadyTaken = paidMap[partner._id.toString()] || 0;
-      const remaining = Number((eligible - alreadyTaken).toFixed(2));
-      return {
+
+      //  Check already paid dividends (any overlap with this range)
+      const alreadyPaid = await PARTNER_DIVIDEND_PAYOUT.aggregate([
+        {
+          $match: {
+            partnerId: partner._id,
+            status: "Paid",
+            periodFrom: { $lte: end },
+            periodTo: { $gte: start }
+          }
+        },
+        { $group: { _id: null, totalPaid: { $sum: "$amount" } } }
+      ]);
+      const totalPaid = alreadyPaid[0]?.totalPaid || 0;
+
+      // Remaining share after subtracting already paid
+      const remaining = Number((eligible - totalPaid).toFixed(2));
+
+      data.push({
         partnerId: partner._id,
         name: partner.name,
         percentage: partner.percentage,
         eligible,
-        alreadyTaken,
-        remaining
-      };
-    });
+        alreadyTaken: totalPaid,
+        remaining: remaining > 0 ? remaining : 0
+      });
+    }
 
     res.status(200).json({
       fromDate,
@@ -610,7 +624,7 @@ export const getPartnerDividendHistory = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const skip = (page - 1) * limit;
 
-    const matchStage = {};
+     const matchStage = {};
 
     if (fromDate && toDate) {
       const start = new Date(fromDate);
@@ -626,50 +640,73 @@ export const getPartnerDividendHistory = async (req, res, next) => {
       ];
     }
 
-    const pipeline = [
-      { $match: matchStage },
-      { $sort: { createdAt: -1 } },
+ const pipeline = [
+  { $match: matchStage },
+  { $sort: { createdAt: -1 } },
 
-      // Join with transactions if you need account/payment details
-      {
-        $lookup: {
-          from: "transactions",
-          localField: "referenceId",
-          foreignField: "referenceId",
-          as: "transactionInfo"
-        }
-      },
-      { $unwind: { path: "$transactionInfo", preserveNullAndEmptyArrays: true } },
+  // Lookup partner to get partnerName
+  {
+    $lookup: {
+      from: "partners",
+      localField: "partnerId",
+      foreignField: "_id",
+      as: "partnerInfo"
+    }
+  },
+  { $unwind: { path: "$partnerInfo", preserveNullAndEmptyArrays: true } },
 
-      {
-        $project: {
-          _id: 1,
-          partnerId: 1,
-          partnerName: 1,
-          // referenceId: 1,
-          payoutAmount: 1,
-          percentage: 1,
-          eligibleAmount: 1,
-          periodFrom: 1,
-          periodTo: 1,
-          note: 1,
-          createdAt: 1,
-          createdBy: 1,
-          account: {
-            name: "$transactionInfo.accountName",
-            type: "$transactionInfo.accountType"
-          },
-          // paymentMethod: "$transactionInfo.paymentType"
-        }
-      },
+  // Lookup transaction using referenceId
+  {
+    $lookup: {
+      from: "transactions",
+      localField: "transactionId",
+      foreignField: "_id",
+      as: "transactionInfo"
+    }
+  },
+  { $unwind: { path: "$transactionInfo", preserveNullAndEmptyArrays: true } },
 
-      {
-        $facet: {
-          data: [{ $skip: skip }, { $limit: limit }],
-          totalCount: [{ $count: "count" }]
-        }
+  // Lookup account using transactionInfo.accountId
+  {
+    $lookup: {
+      from: "accounts",
+      localField: "transactionInfo.accountId",
+      foreignField: "_id",
+      as: "accountInfo"
+    }
+  },
+  { $unwind: { path: "$accountInfo", preserveNullAndEmptyArrays: true } },
+
+  {
+    $project: {
+      _id: 1,
+      partnerId: 1,
+      partnerName: "$partnerInfo.name",
+      payoutAmount: 1,
+      percentage: 1,
+      eligibleAmount: 1,
+      amount: 1,
+      periodFrom: 1,
+      periodTo: 1,
+      note: 1,
+      createdAt: 1,
+      createdBy: 1,
+      account: {
+        _id: "$accountInfo._id",
+        name: "$accountInfo.accountName",
+        type: "$accountInfo.accountType"
       }
-    ];
+    }
+  },
+
+  {
+    $facet: {
+      data: [{ $skip: skip }, { $limit: limit }],
+      totalCount: [{ $count: "count" }]
+    }
+  }
+];
+
 
     const result = await PARTNER_DIVIDEND_PAYOUT.aggregate(pipeline);
 
