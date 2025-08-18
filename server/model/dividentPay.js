@@ -14,7 +14,7 @@ const partnerDividendPayoutSchema = new mongoose.Schema({
 
   // This payout
   amount: { type: Number, required: true, min: 0 },
-  paymentModeId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" }, // cash/bank/UPI account
+  // paymentModeId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" }, // cash/bank/UPI account
   note: { type: String },
 
   // Link to the accounting entry you create

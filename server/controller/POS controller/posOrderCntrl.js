@@ -854,7 +854,7 @@ printer.bold(true);
 // Build the full line and center it manually
 const totalText = `Total: ${grandTotal.trim()}`;
 const totalLinePadded = totalText.padStart(
-  Math.floor((48 + totalText.length) / 2),
+  Math.floor((52 + totalText.length) / 2),
   " "
 );
 printer.println(totalLinePadded);
@@ -1024,7 +1024,7 @@ printer.bold(true);
 // Build the full line and center it manually
 const totalText = `Total: ${grandTotal.trim()}`;
 const totalLinePadded = totalText.padStart(
-  Math.floor((48 + totalText.length) / 2),
+  Math.floor((52 + totalText.length) / 2),
   " "
 );
 printer.println(totalLinePadded);
@@ -1291,7 +1291,7 @@ printer.bold(true);
 // Build the full line and center it manually
 const totalText = `Total: ${grandTotal.trim()}`;
 const totalLinePadded = totalText.padStart(
-  Math.floor((48 + totalText.length) / 2),
+  Math.floor((52 + totalText.length) / 2),
   " "
 );
 printer.println(totalLinePadded);

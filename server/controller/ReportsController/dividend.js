@@ -238,7 +238,7 @@ export const takePartnerDividend = async (req, res, next) => {
       fromDate,
       toDate,
       amount,
-      paymentModeId,
+      // paymentModeId,
       note
     } = req.body;
 
@@ -254,9 +254,9 @@ export const takePartnerDividend = async (req, res, next) => {
         if(!amount){
         return res.status(400).json({ message:"Amount  is required!"})
     }
-        if(!paymentModeId){
-        return res.status(400).json({ message:"Payment mode is required!"})
-    }
+    //     if(!paymentModeId){
+    //     return res.status(400).json({ message:"Payment mode is required!"})
+    // }
 
   
 
@@ -349,7 +349,7 @@ export const takePartnerDividend = async (req, res, next) => {
     const txn = await TRANSACTION.create({
       restaurantId: dividendAccount.restaurantId || null,
       accountId: dividendAccount._id,
-      paymentType: paymentModeId || null,
+      // paymentType: paymentModeId || null,
       amount: amount,
       type: "Debit",
       referenceId: refId,
@@ -368,7 +368,7 @@ export const takePartnerDividend = async (req, res, next) => {
       percentage: partner.percentage,
       eligibleAmount,
       amount,
-      paymentModeId,
+      // paymentModeId,
       transactionId: txn._id,
       referenceId: refId,
       note,
@@ -659,7 +659,7 @@ export const getPartnerDividendHistory = async (req, res, next) => {
             name: "$transactionInfo.accountName",
             type: "$transactionInfo.accountType"
           },
-          paymentMethod: "$transactionInfo.paymentType"
+          // paymentMethod: "$transactionInfo.paymentType"
         }
       },
 
