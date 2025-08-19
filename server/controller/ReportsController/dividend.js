@@ -155,7 +155,7 @@ export const getDividendSharingReport = async (req, res, next) => {
   try {
 
 
-    const { fromDate, toDate } = req.query;
+    const { fromDate, toDate,search } = req.query;
 
     const user = await USER.findById(req.user).lean();
     if (!user) return res.status(400).json({ message: "User not found!" });
@@ -185,30 +185,34 @@ export const getDividendSharingReport = async (req, res, next) => {
       {
         $group: {
           _id: null,
-          totalCOGS: { $sum: "$beforeVat" }
+          totalCOGS: { $sum: "$totalBeforeVAT"}
         }
       }
     ]);
     const cogs = purchasesAgg[0]?.totalCOGS || 0;
 
-    // === EXPENSES ===
-    const expenseDocs = await EXPENSE.find({
-      createdAt: { $gte: start, $lte: end }
-    }).lean();
-
-    let totalOperatingExpenses = 0;
-    for (const exp of expenseDocs) {
-      for (const item of exp.expenseItems) {
-        totalOperatingExpenses += item.beforeVat || 0;
+        const ExpenseAgg = await EXPENSE.aggregate([
+      { $match: {  createdAt: { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: null,
+          OperatingExpenses: { $sum: "$totalBeforeVAT"}
+        }
       }
-    }
+    ]);
+    const totalOperatingExpenses = ExpenseAgg[0]?.OperatingExpenses || 0;
 
-    // === PROFIT ===
     const grossProfit = revenueBeforeVAT - cogs;
     const netProfit = grossProfit - totalOperatingExpenses;
 
+     const partnerFilter = {};
+    if (search) {
+      partnerFilter.name = { $regex: search, $options: "i" }; // case-insensitive
+    }
+
+
     // === PARTNERS ===
-    const partners = await PARTNER.find({}).lean();
+    const partners = await PARTNER.find(partnerFilter).lean();
 
     // Decide distributable base: losses are ignored unless allocateLoss=true
     const netBase = (allocateLoss === "true") ? netProfit : Math.max(netProfit, 0);
@@ -302,17 +306,16 @@ export const takePartnerDividend = async (req, res, next) => {
     const cogs = purchasesAgg[0]?.totalCOGS || 0;
 
     // Operating Expenses from EXPENSE: sum expenseItems totalBeforeVAT
-    const expenseDocs = await EXPENSE.find({
-      createdAt: { $gte: start, $lte: end }
-    }).lean();
-
-    let totalOperatingExpenses = 0;
-    for (const exp of expenseDocs) {
-      for (const item of exp.expenseItems) {
-        // Make sure your expenseItems actually store totalBeforeVAT; if not, switch to item.baseTotal.
-        totalOperatingExpenses += item.totalBeforeVAT || 0
+   const ExpenseAgg = await EXPENSE.aggregate([
+      { $match: {  createdAt: { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: null,
+          OperatingExpenses: { $sum: "$totalBeforeVAT"}
+        }
       }
-    }
+    ]);
+    const totalOperatingExpenses = ExpenseAgg[0]?.OperatingExpenses || 0;
 
     const grossProfit = revenueBeforeVAT - cogs;
     const netProfit = grossProfit - totalOperatingExpenses;
@@ -436,16 +439,19 @@ export const getAvailablePartnerDividends = async (req, res, next) => {
     const cogs = purchasesAgg[0]?.totalCOGS || 0;
 
     // === 3) Operating Expenses from EXPENSE
-    const expenseDocs = await EXPENSE.find({ createdAt: { $gte: start, $lte: end } }).lean();
-    let totalExpenses = 0;
-    for (const exp of expenseDocs) {
-      for (const item of exp.expenseItems) {
-        totalExpenses += item.totalBeforeVAT || 0;
+    const ExpenseAgg = await EXPENSE.aggregate([
+      { $match: {  createdAt: { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: null,
+          OperatingExpenses: { $sum: "$totalBeforeVAT"}
+        }
       }
-    }
+    ]);
+    const totalOperatingExpenses = ExpenseAgg[0]?.OperatingExpenses || 0;
 
     const grossProfit = revenue - cogs;
-    const netProfit = grossProfit - totalExpenses;
+    const netProfit = grossProfit - totalOperatingExpenses;
 
     // if (netProfit <= 0) {
     //   return res.status(200).json({
@@ -655,6 +661,7 @@ export const getPartnerDividendHistory = async (req, res, next) => {
   },
   { $unwind: { path: "$partnerInfo", preserveNullAndEmptyArrays: true } },
 
+
   // Lookup transaction using referenceId
   {
     $lookup: {
@@ -684,6 +691,7 @@ export const getPartnerDividendHistory = async (req, res, next) => {
       partnerName: "$partnerInfo.name",
       payoutAmount: 1,
       percentage: 1,
+      netProfit:1,
       eligibleAmount: 1,
       amount: 1,
       periodFrom: 1,
