@@ -85,7 +85,7 @@ export const getProfitAndLossReport = async (req, res, next) => {
         }
         operatingExpenses[name] += amount;
         TotalOperatingExpenses += amount;
-      }
+      }``
     }
 
 
