@@ -17,7 +17,7 @@ const kotNotificationSchema = new mongoose.Schema({
         default: 'Pending'
       },
       message: { type: String },
-      
+      note:{ type:String, default:null},
       // For combo items
       isComboItem: { type: Boolean, default: false },
       comboId: { type: mongoose.Schema.Types.ObjectId, ref: 'Combo' },

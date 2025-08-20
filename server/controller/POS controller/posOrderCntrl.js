@@ -183,6 +183,7 @@ export const createOrder = async (req, res, next) => {
             price: item.comboPrice || combo.comboPrice,
             comboPrice: item.comboPrice || combo.comboPrice,
             qty: item.qty ?? 1,
+            note:item.note || null,
             total: item.total,
             discount: item.discountAmount || 0,
             addOns: item.addOns || [],
@@ -204,6 +205,7 @@ export const createOrder = async (req, res, next) => {
             foodId: item.foodId,
             foodName: food.foodName,
             portion: item.portion || null,
+            note:item.note || null,
             price: item.price,
             qty: item.qty ?? 1,
             total: item.total,
@@ -366,6 +368,7 @@ if (action === 'print') {
           isComboItem: true,
           comboId: combo._id,
           comboName: combo.comboName,
+          note: item.note || null,
           qty: item.qty,
           comboItems: comboItemsArray,
         });
@@ -379,6 +382,7 @@ if (action === 'print') {
         kitchenItemMap[kitchenId].push({
           foodId: item.foodId,
           name: item.foodName || food.foodName,
+          note:item.note || null,
           portion: item.portion,
           quantity: item.qty,
           isComboItem: false,
@@ -458,6 +462,7 @@ if (shouldSendKOT) {
       kitchenItemMap[kitchenId].push({
         foodId: combo._id,
         name: combo.comboName,
+        note:item.note,
         quantity: item.qty,
         status: 'Pending',
         message: 'Combo Order',
@@ -475,6 +480,7 @@ if (shouldSendKOT) {
 
       kitchenItemMap[kitchenId].push({
         foodId: item.foodId,
+        note:item.note || null,
         name: item.foodName || food.foodName,
         portion: item.portion,
         quantity: item.qty,
@@ -553,7 +559,6 @@ export const printKOTReceipt = async (order, kitchenItems = [], printerIp = null
   try {
 
     if (!printerIp)  throw new Error('No printer IP provided');
-    console.log(printerIp, 'printerip');
 
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON,
@@ -598,7 +603,6 @@ export const printKOTReceipt = async (order, kitchenItems = [], printerIp = null
     printer.setTextNormal();
 
 
-
 printer.println("Kitchen Order Ticket");
 printer.bold(false);
 
@@ -633,10 +637,12 @@ printer.bold(false);
     const timeLabel = `Time: ${timeStr}`;
     printer.println(`${dateLabel}${" ".repeat(LINE_WIDTH - dateLabel.length - timeLabel.length)}${timeLabel}`);
 
+
     // Bill & Waiter
     const billNo = `Bill No. : ${order.order_id || "-"}`;
     const waiter = `Waiter: ${order.createdBy || "-"}`;
     printer.println(`${billNo}${" ".repeat(LINE_WIDTH - billNo.length - waiter.length)}${waiter}`);
+    
 
     // Items Header
     printer.drawLine();
@@ -644,25 +650,38 @@ printer.bold(false);
     printer.println(`Item${" ".repeat(20 - 4)}Portion     Qty`);
     printer.drawLine();
 
-    // Print Items
+     // Print Items
     let totalQty = 0;
     let totalItems = 0;
+    let itemCount = 1; // numbering for main items
 
     for (const item of kitchenItems) {
       if (item.isComboItem) {
-        // Print Combo Name
-          const comboLabel = `Combo: ${item.comboName}`;
-      const comboName = comboLabel.length > 30
-        ? comboLabel.slice(0, 20)
-        : comboLabel.padEnd(20, " ");
+        // Print Combo Name as main item
+        const comboLabel = `Combo: ${item.comboName}`;
+        const comboName = comboLabel.length > 30
+          ? comboLabel.slice(0, 20)
+          : comboLabel.padEnd(20, " ");
 
-      const comboQty = `x${item.qty}`.padStart(3, " ");
+        const comboQty = `x${item.qty}`.padStart(3, " ");
 
-      printer.bold(true);
-      printer.println(`${comboName}${"-".padEnd(10)}${comboQty}`);
-      printer.bold(false);
-        printer.setTextNormal();
-          console.log(item.comboItems,'combo items')
+        printer.bold(true);
+        printer.println(`${itemCount}. ${comboName}${"-".padEnd(10)}${comboQty}`);
+        printer.bold(false);
+
+        // Add note if present
+       if (item.note) {
+  printer.setTextNormal();
+  printer.setTypeFontB();   // Smaller font
+  printer.println(`   (${item.note})`);
+  printer.setTypeFontA();   // Reset back to normal
+}
+
+        totalQty += item.qty || 1;
+        totalItems++;
+        itemCount++; // count only main combo
+
+        // Print combo sub-items (NO count)
         for (const it of item.comboItems) {
           const itemName = it.name.length > 18
             ? it.name.slice(0, 18)
@@ -672,18 +691,32 @@ printer.bold(false);
           const qty = `x${totalComboItemQty}`.padStart(3, " ");
 
           printer.println(`${itemName}${portion}${qty}`);
-          totalQty += totalComboItemQty|| 1;
-          totalItems++;
+          totalQty += totalComboItemQty || 1;
         }
       } else {
+        // Normal item (non-combo)
         const name = item.name;
-        const itemName = name.length > 20 ? name.slice(0, 20) : name.padEnd(20, " ");
+        const itemName = name.length > 20
+          ? name.slice(0, 20)
+          : name.padEnd(20, " ");
         const portion = (item.portion || "-").padEnd(10, " ");
         const qty = `x${item.quantity}`.padStart(3, " ");
 
-        printer.println(`${itemName}${portion}${qty}`);
+        printer.bold(true);
+        printer.println(`${itemCount}. ${itemName}${portion}${qty}`);
+        printer.bold(false);
+
+        // Add note if present
+    if (item.note) {
+  printer.setTextNormal();
+  printer.setTypeFontB();   // Smaller font
+  printer.println(`   (${item.note})`);
+  printer.setTypeFontA();   // Reset back to normal
+}
+
         totalQty += item.quantity || 1;
         totalItems++;
+        itemCount++; // count for main items
       }
     }
 
@@ -692,6 +725,7 @@ printer.bold(false);
     printer.drawLine();
     printer.println(`Item : ${totalItems}`.padEnd(28, " ") + `Qty. : ${totalQty}`);
     printer.drawLine();
+
 
     // Footer & cut
     printer.cut();
@@ -719,7 +753,7 @@ printer.bold(false);
 
 export const printTakeawayCustomerReceipt = async (order, printerIp = null) => {
   try {
-    console.log(order,'order vannu')
+  
     if (!printerIp)  throw new Error('No printer IP provided');
 
     const popOrder = await ORDER.findById(order._id)

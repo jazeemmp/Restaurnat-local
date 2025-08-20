@@ -19,6 +19,10 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: function() { return !this.isCombo; } // Only required for non-combo items
   },
+  note:{
+    type:String,
+    default:null,
+  },
   
   // Combo-specific fields
   comboId: {
