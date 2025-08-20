@@ -649,6 +649,8 @@ export const getDailyTransactionReport = async (req, res, next) => {
       paymentModeName = '',
     } = req.query;
 
+    console.log(fromDate ,'to' , toDate)
+
     const limit = parseInt(req.query.limit) || 20;
     const page = parseInt(req.query.page) || 1;
     const skip = (page - 1) * limit;

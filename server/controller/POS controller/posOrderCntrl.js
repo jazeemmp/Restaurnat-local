@@ -578,7 +578,14 @@ export const printKOTReceipt = async (order, kitchenItems = [], printerIp = null
     const customerType = popOrder.customerTypeId?.type || "Order";
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-GB");
-    const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+   
+// Format time → 12-hour clock with AM/PM in local timezone
+const timeStr = now.toLocaleTimeString("en-US", { 
+  hour: "2-digit", 
+  minute: "2-digit", 
+  hour12: true   // Force 12-hour format
+});
+
 
     let kitchenName = "Main";
     if (kitchenItems.length) {
@@ -765,10 +772,11 @@ export const printTakeawayCustomerReceipt = async (order, printerIp = null) => {
     const customerType = popOrder.customerTypeId?.type || "Order";
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-GB");
-    const timeStr = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const timeStr = now.toLocaleTimeString("en-US", { 
+  hour: "2-digit", 
+  minute: "2-digit", 
+  hour12: true   // Force 12-hour format
+});
 
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON,
@@ -958,7 +966,11 @@ export const printDinInCustomerReceipt = async (req,res,next) => {
     const customerType = popOrder.customerTypeId?.type || "Order";
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-GB");
-    const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const timeStr = now.toLocaleTimeString("en-US", { 
+  hour: "2-digit", 
+  minute: "2-digit", 
+  hour12: true   // Force 12-hour format
+});
 
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON,
@@ -1194,10 +1206,11 @@ export const rePrintDinIn = async (req,res,next) => {
     const customerType = popOrder.customerTypeId?.type || "Order";
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-GB");
-    const timeStr = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const timeStr = now.toLocaleTimeString("en-US", { 
+  hour: "2-digit", 
+  minute: "2-digit", 
+  hour12: true   // Force 12-hour format
+});
 
     const printer = new ThermalPrinter({
       type: PrinterTypes.EPSON,
