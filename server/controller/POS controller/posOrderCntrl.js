@@ -289,9 +289,8 @@ export const createOrder = async (req, res, next) => {
     }
     await order.save();
 
-    if (ctypeName.includes('Dine-In') && tableId) {
+    if (ctypeName.includes('Dine-In')) {
       const table = await TABLES.findById(tableId);
-      if (!table) return res.status(400).json({ message: 'Table not found' });
 
       const updatedTable = await TABLES.findOneAndUpdate(
         { _id: tableId },
