@@ -650,3 +650,140 @@ export const getRiderCompleted = async (req, res, next) => {
     next(err);
   }
 };
+
+
+
+
+export const getRiderReport = async (req, res, next) => {
+  try {
+    const user = await USER.findById(req.user);
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const {
+      riderId,
+      fromDate,
+      toDate,
+      status,
+      search,
+    } = req.query;
+
+    if (!riderId) {
+      return res.status(400).json({ message: "riderId is required" });
+    }
+
+    const matchStage = {
+      riderId: new mongoose.Types.ObjectId(riderId),
+    };
+
+    // Date range filter (based on createdAt or deliveredTime)
+    if (fromDate && toDate) {
+      const start = new Date(fromDate);
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      matchStage.createdAt = { $gte: start, $lte: end };
+    }
+
+    // Status filter
+    if (status) {
+      matchStage.status = status;
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+
+      {
+        $lookup: {
+          from: "customers",
+          localField: "customerId",
+          foreignField: "_id",
+          as: "customer",
+        },
+      },
+      { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "riders",
+          localField: "riderId",
+          foreignField: "_id",
+          as: "rider",
+        },
+      },
+      { $unwind: { path: "$rider", preserveNullAndEmptyArrays: true } },
+
+      {
+        $addFields: {
+          order_id_str: { $toString: "$order_id" },
+        },
+      },
+    ];
+
+    // Search filter
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { orderNo: { $regex: search, $options: "i" } },
+            { order_id_str: { $regex: search, $options: "i" } },
+            { ticketNo: { $regex: search, $options: "i" } },
+            { "customer.name": { $regex: search, $options: "i" } },
+            { location: { $regex: search, $options: "i" } },
+            { "rider.name": { $regex: search, $options: "i" } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
+      {
+        $project: {
+          order_id: 1,
+          orderNo: 1,
+          ticketNo: 1,
+          orderType: 1,
+          customer: "$customer.name",
+          rider: "$rider.name",
+          location: 1,
+          subTotal: 1,
+          totalAmount: 1,
+          status: 1,
+          pickupTime: 1,
+          deliveredTime: 1,
+          createdAt: 1,
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+      {
+        $project: {
+          data: 1,
+          totalCount: {
+            $ifNull: [{ $arrayElemAt: ["$totalCount.count", 0] }, 0],
+          },
+        },
+      }
+    );
+
+    const result = await ORDER.aggregate(pipeline);
+
+    return res.json({
+      page,
+      limit,
+      totalCount: result[0]?.totalCount || 0,
+      data: result[0]?.data || [],
+    });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -30,7 +30,7 @@ import { createIngredient, deleteIngredient, getAllIngredients, updateIngredient
 import { createPurchase, getAllPurchasesReport, getOnePurchase, getPurchaseList, updatePurchase } from '../controller/purchse-Expense/purchase.js';
 import { createExpense, getAllExpensesReport, getExpenseList, getOneExpense, updateExpense } from '../controller/purchse-Expense/Expense.js';
 import {  getKOTTickets } from '../controller/kithchenPanel/kitchenCntrl.js';
-import { assignRiderForOut, completeHomeDelivery, createRider, deleteRider, getDeliveredHomeDelivery, getOutForHomeDelivery, getPlacedHomeDelivery, getRiderCompleted, getRiderOngoingOrders, getRiders, getWaitingForHomeDelivery, markOrderReadyForPickup, updateRider } from '../controller/Delivery/homeDeliveryCntrl.js';
+import { assignRiderForOut, completeHomeDelivery, createRider, deleteRider, getDeliveredHomeDelivery, getOutForHomeDelivery, getPlacedHomeDelivery, getRiderCompleted, getRiderOngoingOrders, getRiderReport, getRiders, getWaitingForHomeDelivery, markOrderReadyForPickup, updateRider } from '../controller/Delivery/homeDeliveryCntrl.js';
 import { generateVATReportExcel, generateVATReportPDF, getProfitAndLossReport, getVATReport, profitAndLossExcel, profitandLossPdf, vatSummary } from '../controller/ReportsController/otherReports.js';
 import { getBillSettings, updateBillSettings } from '../controller/Settings/Bill-settings.js';
 import { addPartner, deletePartner, getAvailablePartnerDividends, getDividendSharingReport, getPartnerDividendHistory, getPartners, takePartnerDividend, updatePartner } from '../controller/ReportsController/dividend.js';
@@ -373,5 +373,8 @@ router.post('/dividend/pay',VerifyToken,checkOfflinePermission('Admin'),takePart
 router.get('/dividend/available',VerifyToken,checkOfflinePermission('Admin'),getAvailablePartnerDividends);
 router.get('/dividend/history',VerifyToken,checkOfflinePermission("Admin"),getPartnerDividendHistory)
 
+
+//rider report 
+router.get('/reports/rider',VerifyToken,checkOfflinePermission('Admin'),getRiderReport)
 
 export default router;

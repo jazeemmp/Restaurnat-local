@@ -538,12 +538,12 @@ export const addKitchen = async(req,res,next)=>{
             return res.status(404).json({ message: "No matching restaurants found!" });
         }
 
-           const existingKitchen = await KITCHEN.findOne({ restaurantId });
-    if (existingKitchen) {
-      return res.status(400).json({
-        message: `Restaurant already has a kitchen ('${existingKitchen.name}'). Only one kitchen is allowed!`,
-      });
-    }
+    //        const existingKitchen = await KITCHEN.findOne({ restaurantId });
+    // if (existingKitchen) {
+    //   return res.status(400).json({
+    //     message: `Restaurant already has a kitchen ('${existingKitchen.name}'). Only one kitchen is allowed!`,
+    //   });
+    // }
 
 
 
@@ -661,8 +661,6 @@ export const updateKitchen = async (req, res, next) => {
               message: `Kitchen '${name}' already exists in this branch!`,
             });
           }
-
-
 
         const updatedKitchen = await KITCHEN.findByIdAndUpdate(
             kitchenId,
