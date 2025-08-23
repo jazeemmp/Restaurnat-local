@@ -3,7 +3,7 @@ import USER from '../../model/userModel.js';
 import RIDER from '../../model/Riders.js';
 import CUSTOMER_TYPE from '../../model/customerTypes.js';
 import CUSTOMER from '../../model/customer.js'
-
+import mongoose from 'mongoose';
 
 
 export const createRider = async (req, res, next) => {
@@ -252,7 +252,7 @@ export const completeHomeDelivery = async (req, res, next) => {
 
 
 
-
+      
 
 //deivery status get apis
 
@@ -669,6 +669,7 @@ export const getRiderReport = async (req, res, next) => {
       toDate,
       status,
       search,
+      paymentMethod, //  Added
     } = req.query;
 
     if (!riderId) {
@@ -679,7 +680,7 @@ export const getRiderReport = async (req, res, next) => {
       riderId: new mongoose.Types.ObjectId(riderId),
     };
 
-    // Date range filter (based on createdAt or deliveredTime)
+    // Date filter
     if (fromDate && toDate) {
       const start = new Date(fromDate);
       const end = new Date(toDate);
@@ -687,7 +688,6 @@ export const getRiderReport = async (req, res, next) => {
       matchStage.createdAt = { $gte: start, $lte: end };
     }
 
-    // Status filter
     if (status) {
       matchStage.status = status;
     }
@@ -695,6 +695,7 @@ export const getRiderReport = async (req, res, next) => {
     const pipeline = [
       { $match: matchStage },
 
+      //  Customer
       {
         $lookup: {
           from: "customers",
@@ -705,6 +706,7 @@ export const getRiderReport = async (req, res, next) => {
       },
       { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
 
+      //  Rider
       {
         $lookup: {
           from: "riders",
@@ -715,6 +717,28 @@ export const getRiderReport = async (req, res, next) => {
       },
       { $unwind: { path: "$rider", preserveNullAndEmptyArrays: true } },
 
+      //  Payment Records
+      {
+        $lookup: {
+          from: "paymentrecords",
+          localField: "_id",
+          foreignField: "orderId",
+          as: "paymentInfo",
+        },
+      },
+      { $unwind: { path: "$paymentInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$paymentInfo.methods", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "accounts",
+          localField: "paymentInfo.methods.accountId",
+          foreignField: "_id",
+          as: "account",
+        },
+      },
+      { $unwind: { path: "$account", preserveNullAndEmptyArrays: true } },
+
       {
         $addFields: {
           order_id_str: { $toString: "$order_id" },
@@ -722,7 +746,16 @@ export const getRiderReport = async (req, res, next) => {
       },
     ];
 
-    // Search filter
+    //  Payment Method filter
+    if (paymentMethod) {
+      pipeline.push({
+        $match: {
+          "account.accountName": paymentMethod,
+        },
+      });
+    }
+
+    //  Search filter
     if (search) {
       pipeline.push({
         $match: {
@@ -733,27 +766,47 @@ export const getRiderReport = async (req, res, next) => {
             { "customer.name": { $regex: search, $options: "i" } },
             { location: { $regex: search, $options: "i" } },
             { "rider.name": { $regex: search, $options: "i" } },
+            { "account.accountName": { $regex: search, $options: "i" } }, //  searchable by payment
           ],
         },
       });
     }
 
+    //  Group payments back
     pipeline.push(
       {
-        $project: {
-          order_id: 1,
-          orderNo: 1,
-          ticketNo: 1,
-          orderType: 1,
-          customer: "$customer.name",
-          rider: "$rider.name",
-          location: 1,
-          subTotal: 1,
-          totalAmount: 1,
-          status: 1,
-          pickupTime: 1,
-          deliveredTime: 1,
-          createdAt: 1,
+        $group: {
+          _id: "$_id",
+          order_id: { $first: "$order_id" },
+          orderNo: { $first: "$orderNo" },
+          ticketNo: { $first: "$ticketNo" },
+          orderType: { $first: "$orderType" },
+          customer: { $first: "$customer.name" },
+          rider: { $first: "$rider.name" },
+          location: { $first: "$location" },
+          subTotal: { $first: "$subTotal" },
+          totalAmount: { $first: "$totalAmount" },
+          status: { $first: "$status" },
+          pickupTime: { $first: "$pickupTime" },
+          deliveredTime: { $first: "$deliveredTime" },
+          createdAt: { $first: "$createdAt" },
+          paymentMethods: {
+            $push: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$paymentInfo.methods.amount", null] },
+                    { $ne: ["$account.accountName", null] },
+                  ],
+                },
+                {
+                  type: "$account.accountName",
+                  amount: "$paymentInfo.methods.amount",
+                },
+                "$$REMOVE",
+              ],
+            },
+          },
         },
       },
       {

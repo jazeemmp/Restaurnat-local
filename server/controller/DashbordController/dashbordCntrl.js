@@ -13,166 +13,19 @@ import ACCOUNTS from '../../model/account.js'
 import TRANSACTION from '../../model/transaction.js'
 import PURCHASE from '../../model/purchase.js';
 import EXPENSE from '../../model/expense.js'
+import moment from "moment-timezone";
 
 
 
-// export const getQuickViewDashboard = async(req,res,next)=>{
-//     try {
 
-//           const { fromDate, toDate } = req.params;
-
-//           console.log(fromDate,toDate,'form date and to date');
-
-//         const userId = req.user 
-
-//         const user = await USER.findOne({ _id: userId }).lean();
-//         if (!user) return res.status(400).json({ message: "User not found" });
-
-//         // 1. Get all completed orders in the date range
-
-//              const start = new Date(fromDate);
-//             const end = new Date(toDate);
-//             // end.setHours(23, 59, 59, 999);
-    
-
-//     const completedOrders = await ORDER.find({
-//         status: "Completed",
-//         createdAt: { $gte: start, $lte: end }
-//         }).select("_id customerTypeId");
-
-       
-//       const orderIds = completedOrders.map(order => order._id);
-
-//     // 2. Create a mapping of customerTypeId => readable name
-//     const customerTypes = await CUSTOMER_TYPE.find();
-//     const customerTypeMap = new Map();
-//     customerTypes.forEach(ct => {
-//       customerTypeMap.set(ct._id.toString(), ct.type); // e.g., "Dine-In"
-//     });
-
-
-//   // 3. Aggregate total sales by customerType using Payment
-                    
-//     const payments = await PAYMENT.aggregate([
-//       {
-//         $match: {
-//           orderId: { $in: orderIds },
-//           createdAt: { $gte: start, $lte: end }
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: "orders",
-//           localField: "orderId",
-//           foreignField: "_id",
-//           as: "orderInfo"
-//         }
-//       },
-//       { $unwind: "$orderInfo" },
-//       {
-//         $group: {
-//           _id: "$orderInfo.customerTypeId",
-//           total: { $sum: "$grandTotal" },
-//           count: { $sum: 1 }
-//         }
-//       }
-//     ]);
-
-
-//     let totalSales = 0;
-//     let totalOrders = 0;
-
-//     const typeWiseData = new Map();
-
-//     // Store actual results in map first
-//     payments.forEach((p) => {
-//       const type = customerTypeMap.get(p._id.toString()) || "Unknown";
-//       typeWiseData.set(type, {
-//         sales: parseFloat(p.total.toFixed(2)),
-//         orders: p.count,
-//       });
-
-//       totalSales += p.total;
-//       totalOrders += p.count;
-//     });
-
-//     const breakdown = [];
-
-//     // Now make sure all customer types are included (even if 0)
-//     customerTypeMap.forEach((type, id) => {
-//       if (typeWiseData.has(type)) {
-//         breakdown.push({
-//           name: type,
-//           sales: typeWiseData.get(type).sales,
-//           orders: typeWiseData.get(type).orders,
-//         });
-//       } else {
-//         breakdown.push({
-//           name: type,
-//           sales: 0,
-//           orders: 0,
-//         });
-//       }
-//     });
-
-
-//         // 4. Get total expenses (debit only)
-//     const debitAgg = await TRANSACTION.aggregate([
-//       {
-//         $match: {
-//           type: "Debit",
-//           createdAt: { $gte: start, $lte: end },
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: null,
-//           totalDebit: { $sum: "$amount" },
-//         },
-//       },
-//     ]);
-
-//     const totalDebit = debitAgg[0]?.totalDebit || 0;
-//     const netProfit = totalSales - totalDebit;
-
-
-
-//     // Add totals first
-//     const data = [
-    
-//       {
-//         name: "Total Sales",
-//         sales: parseFloat(totalSales.toFixed(2)),
-//         orders: null,
-//       },
-//       {
-//         name: "Net Profit",
-//         sales: parseFloat(netProfit.toFixed(2)),
-//         orders: null,
-//       },
-//       {
-//         name: "Total Orders",
-//         sales: null,
-//         orders: totalOrders,
-//       },
-    
-//       ...breakdown,
-//     ]; 
-
-//    return res.status(200).json(data);
-        
-//     } catch (err) {
-//         next(err)
-//     }
-// }
 export const getQuickViewDashboard = async (req, res, next) => {
   try {
     const user = await USER.findById(req.user).lean();
     if (!user) {
       return res.status(400).json({ message: "User not found!" });
     }
-
-    const { fromDate, toDate } = req.query;
+    const { fromDate, toDate } = req.params;
+  
     const start = fromDate ? new Date(fromDate) : new Date("2000-01-01");
     const end = toDate ? new Date(toDate) : new Date();
     end.setHours(23, 59, 59, 999);
@@ -296,35 +149,6 @@ export const getSalesOverview = async(req,res,next)=>{
       customerTypeMap.set(ct._id.toString(), ct.type);
     });
 
-    //     const payments = await PAYMENT.aggregate([
-    //   {
-    //     $match: {
-    //       createdAt: {
-    //         $gte: start,
-    //         $lte: end
-    //       }
-    //     }
-    //   },
-    //   {
-    //     $lookup: {
-    //       from: "orders",
-    //       localField: "orderId",
-    //       foreignField: "_id",
-    //       as: "orderInfo"
-    //     }
-    //   },
-    //   { $unwind: "$orderInfo" },
-    //   {
-    //     $group: {
-    //       _id: {
-    //         date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-    //         customerTypeId: "$orderInfo.customerTypeId"
-    //       },
-    //       total: { $sum: "$grandTotal" }
-    //     }
-    //   }
-    // ]);
-
         // Step 1: Prepare sales map from DB
        const payments = await PAYMENT.aggregate([
       {
@@ -346,7 +170,7 @@ export const getSalesOverview = async(req,res,next)=>{
       { $unwind: "$orderInfo" },
       {
         $project: {
-          paidAmount: 1,
+          beforeVat: 1,
           createdAt: 1,
           customerTypeId: "$orderInfo.customerTypeId",
           date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -375,10 +199,12 @@ export const getSalesOverview = async(req,res,next)=>{
             slot: "$slot",
             customerTypeId: "$customerTypeId",
           },
-          total: { $sum: "$grandTotal" },
+          total: { $sum: "$beforeVat" },
         },
       },
     ]);
+
+
         // Format result
     const groupedMap = new Map();
 
@@ -390,7 +216,7 @@ export const getSalesOverview = async(req,res,next)=>{
   const slotStartHour = slot.split(":")[0];
 
   // Create timestamp with both date + slot hour
-  const timestamp = new Date(`${date}T${slotStartHour.padStart(2, '0')}:00:00.000Z`);
+const timestamp = new Date(`${date}T${slotStartHour.padStart(2, '0')}:00:00`)
 
   const key = `${date}-${slot}`;
 
@@ -422,10 +248,6 @@ export const getSalesOverview = async(req,res,next)=>{
         next(err)
     }
 }
-
-
-
-
 
 export const getPaymentOverview = async(req,res,next)=>{
     try {
