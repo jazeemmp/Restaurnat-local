@@ -80,6 +80,8 @@ const purchaseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+          isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
   },
   { timestamps: true }
 );

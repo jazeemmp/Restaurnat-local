@@ -53,7 +53,9 @@ const tableSchema  =new mongoose.Schema({
         isDeleted: { type: Boolean, default: false },
             deletedAt: { type: Date, default: null },
             deletedById: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,default:null },
-            deletedBy: { type: String, default: null }
+            deletedBy: { type: String, default: null },
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
 },{
     timestamps:true
 })

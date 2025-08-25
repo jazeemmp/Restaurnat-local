@@ -41,6 +41,8 @@ const userSchema = new mongoose.Schema(
     },
 
     status: { type: Boolean, default: true },
+          isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
   },
   { timestamps: true }
 );

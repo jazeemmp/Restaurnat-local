@@ -780,6 +780,7 @@ export const getCustomerOrderHistory = async (req, res, next) => {
 
 export const getCustomerDueHistory = async (req, res, next) => {
   try {
+    console.log(req.query,'query')
     const { customerId, fromDate, toDate, search = '' } = req.query;
     const limit = parseInt(req.query.limit) || 20;
     const page = parseInt(req.query.page) || 1;

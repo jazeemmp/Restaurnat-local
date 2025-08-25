@@ -36,6 +36,8 @@ const customerSchema = new mongoose.Schema({
       createdBy: {
           type:String,
       },
+     isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
    
 }, { timestamps: true });
 

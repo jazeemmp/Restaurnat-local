@@ -14,6 +14,8 @@ const partnerSchema = new mongoose.Schema({
     min: 0,
     max: 100,
   },
+        isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
 },{
     timestamps:true
 });

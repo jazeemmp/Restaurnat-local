@@ -24,6 +24,8 @@ const partnerDividendPayoutSchema = new mongoose.Schema({
 
   createdById: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdBy: String,
+  isSynced: { type: Boolean, default: false },
+syncedAt: { type: Date }
 },{
     timestamps:true
 }); 

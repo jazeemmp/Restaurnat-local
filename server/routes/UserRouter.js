@@ -151,15 +151,14 @@ router.get('/pos-tables/:restaurantId',VerifyToken,checkOfflinePermission('Sale'
 router.post('/pos-customer',VerifyToken,checkOfflinePermission('Sale'),createCustomerForPOS);
 router.post('/customer',VerifyToken,checkOfflinePermission('Admin'),createCustomerForAdmin);
 router.get('/pos-customer/:restaurantId',VerifyToken,checkOfflinePermission('Sale'),getCustomersForPOS);
-router.get('/customer/:restaurantId',VerifyToken,checkOfflinePermission('Admin'),getCustomersForAdmin);
 router.delete('/pos-customer/:customerId',VerifyToken,checkOfflinePermission('Admin'),customerDelete);
 router.put('/pos-customer',VerifyToken,checkOfflinePermission('Admin'),updateCustomerforPOS);
 router.get('/pos-customerTypes/:restaurantId',VerifyToken,checkOfflinePermission('Sale'),getCustomerTypesForPOS)
 router.post('/pos-customer/due',VerifyToken,checkOfflinePermission('Admin'),payCustomerDue);
-router.get('/customer/history',VerifyToken,checkOfflinePermission('Admin'),getCustomerOrderHistory);
-router.get('/customer/credit',VerifyToken,checkOfflinePermission('Admin'),getCustomerDueHistory)
+router.get('/customer/history/view',VerifyToken,checkOfflinePermission('Admin'),getCustomerOrderHistory);
+router.get('/customer/credit/view',VerifyToken,checkOfflinePermission('Admin'),getCustomerDueHistory)
 router.get('/credit/pdf',VerifyToken,checkOfflinePermission('Admin'),generateCustomerDueHistoryPDF )
-
+router.get('/customer/:restaurantId',VerifyToken,checkOfflinePermission('Admin'),getCustomersForAdmin);
 
 
 

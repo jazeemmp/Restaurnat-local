@@ -24,8 +24,11 @@ const restaurantSchema = new mongoose.Schema(
         vatPercentage: { type: Number , default:null },
         currency: { type: String ,default:null },
         currencySymbol: { type: String,default:null },
+              isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
 
     },
+    
     { timestamps: true }
 );
 

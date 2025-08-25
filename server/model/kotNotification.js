@@ -60,6 +60,10 @@ const kotNotificationSchema = new mongoose.Schema({
       type: String, // or Date if you prefer
       default:null,
     },
+
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+
 }, {
   timestamps: true
 });
