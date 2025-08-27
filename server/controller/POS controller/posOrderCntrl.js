@@ -1470,6 +1470,7 @@ export const getTodayOrdersForPOS = async (req, res, next) => {
       const order = await ORDER.findById(orderId)
       .populate({ path: "tableId", select: "name" })
       .populate({ path: "customerTypeId", select: "type" })
+      .populate({ path: "customerId"})
         .populate({
         path: "items.foodId",
         select: "image",

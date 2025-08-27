@@ -69,6 +69,7 @@ export const createCompanyhAdmin = async (req, res, next) => {
       phone,
       pin,
       role,
+      isSynced:false,
     });
 
     return res.status(200).json({ message: 'Company Admin created successfully', user });
@@ -188,6 +189,7 @@ export const createUser = async (req, res, next) => {
       accessName,
       createdById: user._id,
       createdBy: user.name,
+      isSynced:false
     });
 
     await newUser.save();
@@ -264,7 +266,8 @@ export const updateUser = async (req, res, next) => {
       phone,
       accessName,
       pin: pin ? pin : userToUpdate.pin,
-      access
+      access,
+      isSynced: false,
     };
 
 

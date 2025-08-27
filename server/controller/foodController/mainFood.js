@@ -148,9 +148,9 @@ export const createFood = async (req, res, next) => {
             .status(400)
             .json({ message: "Each portion must include a name,price" });
         }
-        if (!Array.isArray(p.prices) || p.prices.length === 0) {
-          return res.status(400).json({ message: "Each portion must have prices." });
-        }
+        // if (!Array.isArray(p.prices) || p.prices.length === 0) {
+        //   return res.status(400).json({ message: "Each portion must have prices." });
+        // }
       }
     }
 

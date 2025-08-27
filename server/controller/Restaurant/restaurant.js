@@ -128,6 +128,7 @@ export const  createRestuarantBranch = async (req,res,next)=>{
             companyAdmin: companyAdminId,
             logo,
             trn,
+            isSynced:false,
         });
         return res.status(201).json({ message: "Restaurant created successfully", restaurant });
 
@@ -272,6 +273,7 @@ export const updateRestaurantBranch = async (req, res, next) => {
                 currency: currency || restaurant.currency,
                 currencySymbol: currencySymbol || restaurant.currencySymbol,
                 trn: trn || restaurant.trn,
+                isSynced:false,
             },
             { new: true } //  Return updated document
         );
@@ -382,7 +384,8 @@ export const addCustomerType = async (req, res, next) => {
                     await CUSTOMER_TYPE.create({
                         restaurantId: restaurant._id,
                         type: custType.type,
-                        subMethods: custType.subMethods
+                        subMethods: custType.subMethods,
+                        isSynced:false
                     });
                 }
             } else {
@@ -401,7 +404,8 @@ export const addCustomerType = async (req, res, next) => {
                 await CUSTOMER_TYPE.create({
                     restaurantId: restaurant._id,
                     type: custType.type,
-                    subMethods: custType.subMethods || []
+                    subMethods: custType.subMethods || [],
+                    isSynced:false
                 });
             }
         }
@@ -477,6 +481,7 @@ export const addCustomerType = async (req, res, next) => {
           // Update the document
           existingCustomerType.type = type;
           existingCustomerType.subMethods = subMethods;
+          existingCustomerType.isSynced = false;
           await existingCustomerType.save();
 
           return res.status(200).json({ 
@@ -500,6 +505,7 @@ export const addCustomerType = async (req, res, next) => {
           // Update the document
           existingCustomerType.type = type;
           existingCustomerType.subMethods = subMethods || [];
+          existingCustomerType.isSynced = false;
           await existingCustomerType.save();
 
           return res.status(200).json({ 

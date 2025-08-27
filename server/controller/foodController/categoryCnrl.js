@@ -58,6 +58,7 @@ export const createCategory = async(req,res,next)=>{
                     restaurantId: restaurant._id,
                     createdById: user._id,
                     createdBy:user.name,
+                    isSynced:false,
                    
                 })
     
@@ -177,6 +178,7 @@ export const getAllCategories = async (req, res, next) => {
         }
 
         category.name = name;
+        category.isSynced = false;
 
         const updatedCategory = await category.save();
 

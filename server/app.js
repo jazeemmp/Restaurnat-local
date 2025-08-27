@@ -6,6 +6,7 @@ import UserRouter from './routes/UserRouter.js'
 import dotenv from 'dotenv';
 import {  attachSocketToRequest } from './middleware/attachSocket.js';
 import { initSocketServer}  from './config/socket.js'
+import { syncCategory, syncCustomerTypes, syncFloors, syncKitchen, syncRestaurant, syncTables, syncUser, synNormalUser } from "./sync/syncWorker.js";
 
 
 
@@ -46,6 +47,14 @@ app.use((err, req, res, next) => {
   try {
     await connectDB();
 
+    setInterval(syncUser, 60 * 1000);
+    setInterval(syncRestaurant, 60 * 1000)
+    setInterval(syncCustomerTypes, 60 * 1000)
+    setInterval(syncFloors, 60 * 1000)
+    setInterval(syncTables, 60 * 1000)
+    setInterval(syncKitchen, 60 * 1000)
+    setInterval(synNormalUser, 60 * 1000)
+    setInterval(syncCategory, 60 * 1000)
     
     const httpServer = http.createServer(app);
     await initSocketServer(httpServer)

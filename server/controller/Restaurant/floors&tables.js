@@ -73,6 +73,7 @@ export const createFloors = async (req,res,next)=>{
             restaurantId,
             createdById: user._id,
             createdBy:user.name,
+            isSynced:false,
            
         }));
 
@@ -205,8 +206,8 @@ export const updateFloorName = async (req,res,next)=>{
 
         const updatedFloor = await FLOORS.findByIdAndUpdate(
             floorId,
-            { name: name.trim() },
-            { new: true } // Return the updated document
+            { name: name.trim(),isSynced:false },
+            { new: true } 
         );
 
 
@@ -308,6 +309,7 @@ export const createTables = async (req,res,next)=>{
             restaurantId, 
             floorId,    
             name: name.trim(),
+
         });
         
         if (existingTable) {
@@ -322,7 +324,8 @@ export const createTables = async (req,res,next)=>{
             restaurantId,
             floorId,
             createdById:user._id,
-            createdBy:user.name
+            createdBy:user.name,
+            isSynced:false,
          
           
         });
@@ -444,6 +447,7 @@ export const updateTable = async (req,res,next)=>{
                     floorId: floorId ? floorId : table.floorId,
                     updatedById: user._id,
                     updatedBy: user.name,
+                    isSynced:false
                 },
             },
             { new: true } // Return the updated document
@@ -565,6 +569,7 @@ export const addKitchen = async(req,res,next)=>{
             restaurantId,
             createdById: user._id,
             createdBy:user.name,
+            isSynced:false
            
         }));
 
@@ -664,7 +669,7 @@ export const updateKitchen = async (req, res, next) => {
 
         const updatedKitchen = await KITCHEN.findByIdAndUpdate(
             kitchenId,
-            { name: name.trim() },
+            { name: name.trim() ,isSynced:false },
             { new: true } // Return the updated document
         );
 
