@@ -77,6 +77,7 @@ export const CreateMenuType = async(req,res,next)=>{
                    restaurantId :restaurant._id,
                    createdById : user._id,
                    createdBy:user.name,
+                   isSynced:false
                 
                })
             }
@@ -207,6 +208,7 @@ export const updateMenuTypes = async (req,res,next)=>{
         }
 
         menuType.name = name.trim();
+        menuType.isSynced = false;
          await menuType.save();
 
 

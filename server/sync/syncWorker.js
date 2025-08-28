@@ -11,7 +11,13 @@ import CATEGORY from '../model/category.js';
 import FOOD from '../model/food.js';
 import MENU_TYPE from '../model/menuType.js';
 import CHOICE from '../model/choice.js'
+import path from 'path';
+import fs from 'fs';
+import FormData from "form-data";
 import isOnline from 'is-online'
+import dotenv from 'dotenv';
+dotenv.config();
+
 
 
 
@@ -50,7 +56,35 @@ export const syncRestaurant = ()=> withOnlineCheck(async () => {
 
     try {
 
-      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/restaurant`, unsyncedRestaurant);
+        if (unsyncedRestaurant.logo) {
+        const localPath = path.join(process.cwd(), unsyncedRestaurant.logo.replace(/^\//, ""));
+        if (fs.existsSync(localPath)) {
+          const formData = new FormData();
+          formData.append("file", fs.createReadStream(localPath));
+
+          const uploadRes = await axios.post(
+            `${process.env.ONLNE_SERVER_URL}/upload`,
+            formData,
+            { headers: formData.getHeaders() }
+          );
+
+          if (uploadRes.data?.path) {
+            unsyncedRestaurant.logo = `${process.env.ONLNE_SERVER_URL.replace(
+              "/sync",
+              ""
+            )}${uploadRes.data.path}`;
+          }
+        }
+      }
+
+      // Step 2: Send updated restaurant document
+      const payload = unsyncedRestaurant.toObject();
+
+      const response = await axios.post(
+        `${process.env.ONLNE_SERVER_URL}/restaurant`,
+        payload
+      );
+
       if (response.status === 200) {
         await RESTAURANT.updateOne(
           { _id: unsyncedRestaurant._id },
@@ -211,3 +245,87 @@ export const syncCategory = ()=> withOnlineCheck(async () => {
       console.error(`Failed to sync`, err.message);
     }
 })
+
+
+export const syncMenuType = ()=> withOnlineCheck(async () => {
+
+    const unsycMenuType= await MENU_TYPE.find({ isSynced: false });
+    if (!unsycMenuType.length) return;
+
+    try {
+
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/menu-type`, unsycMenuType);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsycMenuType.map(ct => ct._id);
+
+      await MENU_TYPE.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Menu type synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+
+
+
+export const syncFood = () =>
+  withOnlineCheck(async () => {
+    const unsyncedFood = await FOOD.find({ isSynced: false });
+    if (!unsyncedFood.length) return;
+    try {
+      // Step 1: Upload images & replace local paths with uploaded URLs
+      for (const food of unsyncedFood) {
+        if (food.image) {
+          const localPath = path.join(process.cwd(), food.image.replace(/^\//, "")); 
+         
+
+          if (fs.existsSync(localPath)) {
+            const formData = new FormData();
+            formData.append("file", fs.createReadStream(localPath));
+
+            const uploadRes = await axios.post(
+              `${process.env.ONLNE_SERVER_URL}/upload`,
+              formData,
+              { headers: formData.getHeaders() }
+            );
+         
+
+         if (uploadRes.data?.path) {
+          food.image = `${process.env.ONLNE_SERVER_URL.replace("/sync","")}${uploadRes.data.path}`; // prepend server URL
+     
+        }
+          }
+        }
+      }
+
+      // Step 2: Send updated food documents
+      const payload = unsyncedFood.map((f) => ({
+        ...f.toObject(),
+        image: f.image, // make sure image is updated
+      }));
+
+      const response = await axios.post(
+        `${process.env.ONLNE_SERVER_URL}/food`,
+        payload
+      );
+
+      if (response.status === 200) {
+        const ids = unsyncedFood.map((ct) => ct._id);
+        await FOOD.updateMany(
+          { _id: { $in: ids } },
+          { $set: { isSynced: true, syncedAt: new Date() } }
+        );
+        console.log("Food synced successfully");
+      }
+    } catch (err) {
+      console.error("Failed to sync food:", err.message);
+    }
+  });
+

@@ -26,7 +26,7 @@ const generateUniqueRestaurantId = async () => {
 
 export const  createRestuarantBranch = async (req,res,next)=>{
     try{
-       console.log(req.body,'--dfid')
+
         const {
             name, address,country, state, city, email,phone,phone2,phone3,
             openingTime, closingTime, vatPercentage, currency, currencySymbol,trn,
@@ -184,32 +184,33 @@ export const updateRestaurantBranch = async (req, res, next) => {
             openingTime, closingTime, vatPercentage, currency, currencySymbol,trn
         } = req.body;
 
-                 const originalPath = req.file.path;
+             let logo = null; // default to null (no change)
 
-        const dir = path.dirname(originalPath);
-        const baseName = path.basename(originalPath, path.extname(originalPath)); // removes extension
-        const timestamp = Date.now();
-        const outputFileName = `${baseName}-${timestamp}.png`;
-        const pngPath = path.join(dir, outputFileName); // full path to save new image
-
+        if (req.file) {
+            const originalPath = req.file.path;
+            const dir = path.dirname(originalPath);
+            const baseName = path.basename(originalPath, path.extname(originalPath));
+            const timestamp = Date.now();
+            const outputFileName = `${baseName}-${timestamp}.png`;
+            const pngPath = path.join(dir, outputFileName);
 
             // Convert to PNG using sharp
-                        await sharp(originalPath)
+            await sharp(originalPath)
                 .resize({ width: 600, withoutEnlargement: true })
                 .png()
                 .toFile(pngPath);
 
-                // Wait briefly to ensure file is fully released
-                await new Promise(resolve => setTimeout(resolve, 200));
+            // Wait briefly to ensure file is fully released
+            await new Promise(resolve => setTimeout(resolve, 200));
 
-                fs.unlink(originalPath, (err) => {
+            fs.unlink(originalPath, (err) => {
                 if (err) {
                     console.error('Failed to delete original file:', err.message);
                 }
-                });
+            });
 
-            const logo = `/uploads/${path.basename(pngPath)}`;
-
+            logo = `/uploads/${path.basename(pngPath)}`;
+        }
 
 
         const userId = req.user;
@@ -273,7 +274,7 @@ export const updateRestaurantBranch = async (req, res, next) => {
                 currency: currency || restaurant.currency,
                 currencySymbol: currencySymbol || restaurant.currencySymbol,
                 trn: trn || restaurant.trn,
-                isSynced:false,
+                isSynced: false
             },
             { new: true } //  Return updated document
         );
@@ -643,3 +644,5 @@ export const addCustomerType = async (req, res, next) => {
         next(err);
     }
 };
+
+

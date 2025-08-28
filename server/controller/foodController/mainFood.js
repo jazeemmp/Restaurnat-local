@@ -255,6 +255,7 @@ export const createFood = async (req, res, next) => {
       preparationTime: preparationTime || null,
       createdById: user._id,
       createdBy:user.name,
+      isSynced:false,
       
     });
 
@@ -493,10 +494,18 @@ export const updateFood = async (req, res, next) => {
 
   req.file.path = resizedPath;
   req.file.filename = path.basename(resizedPath);
+
+      if (food.image && food.image.startsWith("/uploads/")) {
+      const oldImagePath = path.join(process.cwd(), food.image); 
+      try {
+        if (await fs.promises.stat(oldImagePath)) {
+          await fs.promises.unlink(oldImagePath)
+        }
+      } catch (err) {
+        console.warn("Old image not found, skip delete:", err.message);
+      }
+    }
 }
-
-
-
       // Now define it AFTER compression is done
     const foodImg = req.file 
   ? `/uploads/${req.file.filename}` 
@@ -509,17 +518,18 @@ export const updateFood = async (req, res, next) => {
     food.categoryId = categoryId;
     food.foodType = foodType;
     food.menuTypeIds = menuTypeIds;
-    food.image = foodImg
+    food.image = foodImg;
     food.courseIds = courseIds;
     food.prices = portions && portions.length > 0 ? null : prices;
-    food.basePrice = portions && portions.length > 0 ? null : basePrice,
+    food.basePrice = portions && portions.length > 0 ? null : basePrice;
     food.portions = portions || [];
     food.kitchenId = kitchenId || null;
     food.special = special || false;
     food.addOnsIds = addOnsIds;
     food.preparationTime = preparationTime;
     food.choices = choiceIds;
-    (food.offer = offer ? offer : null), 
+    food.isSynced = false;
+    (food.offer = offer ? offer : null);
 
     await food.save();
 
@@ -534,6 +544,8 @@ export const updateFood = async (req, res, next) => {
     next(err);
   }
 };
+
+
 
 export const getOneFood = async (req, res, next) => {
   try {
