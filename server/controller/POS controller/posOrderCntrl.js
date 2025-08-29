@@ -256,6 +256,7 @@ export const createOrder = async (req, res, next) => {
           status: 'Placed',
           createdById: user._id,
           createdBy: user.name,
+          isSynced:false,
         },
       ]);
     }
@@ -286,6 +287,7 @@ export const createOrder = async (req, res, next) => {
       order.totalAmount += req.body.total;
       order.subTotal += req.body.subTotal
       order.vat +=req.body.vat;
+      order.isSynced = false;
     } else {
       order.items = processedItems;
     }
@@ -1589,7 +1591,7 @@ const paymentRecord = {
   dueAmount ,
   createdById: userId,
   createdBy:user.name,
-
+  isSynced:false,
 };
       
     
@@ -1612,7 +1614,7 @@ const [createdPayment] = await PAYMENT.create([paymentRecord]);
         customerId: customerId || null,
         createdById: userId,
         createdBy:user.name,
-
+        isSynced:false,
       });
 
     }
@@ -1633,6 +1635,7 @@ const [createdPayment] = await PAYMENT.create([paymentRecord]);
       description: `POS Sale for Order ${order.order_id}`,
       createdById: user._id,
       createdBy:user.name,
+      isSynced:false
     });
   
              // Update order 
@@ -1641,6 +1644,7 @@ const [createdPayment] = await PAYMENT.create([paymentRecord]);
       order.customerId = customerId || null;
       order.deliveredTime = new Date() || null
       order.paymentStatus = dueAmount > 0 ? "Partial" : "Paid";
+      order.isSynced= false;
       await order.save();
   
   
@@ -1713,7 +1717,7 @@ export const cancelOrder = async(req,res,next)=>{
 
          const updatedOrder = await ORDER.findByIdAndUpdate(
             orderId,
-            { status: "Cancelled" },
+            { status: "Cancelled" ,isSynced:false },
             { new: true }
           )
           .populate("tableId", "name")
@@ -1802,6 +1806,7 @@ export const changeTable = async(req,res,next)=>{
           currentOrderId: order._id,
           totalAmount: order.totalAmount,
           runningSince: order.createdAt,
+          isSynced:false,
         }
       },
       { new: true }
@@ -1810,6 +1815,7 @@ export const changeTable = async(req,res,next)=>{
     console.log(updatedNewTable,'updated')
 
     order.tableId = tableId;
+    order.isSynced= false;
     await order.save();
   
         // 5. Set old table to Available
@@ -1825,8 +1831,6 @@ export const changeTable = async(req,res,next)=>{
       },
       { new: true }
     );
-
-    console.log(updatedOldTable,'old')
 
       // 6. Emit real-time updates for both tables
     const io = getIO();

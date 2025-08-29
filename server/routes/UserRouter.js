@@ -184,6 +184,8 @@ router.get('/accounts/:restaurantId',VerifyToken,getAccounts);
 router.put('/accounts',VerifyToken,checkOfflinePermission('Admin'),updateAccount);
 router.delete('/accounts/:accountId',VerifyToken,checkOfflinePermission('Admin'),deleteAccount);
 router.get('/accounts/transaction/data',VerifyToken,checkOfflinePermission('Admin'),getTransactionList);
+
+
 //excel
 router.get('/accounts/history/excel',VerifyToken,checkOfflinePermission('Admin'),TransactionListExcel);
 router.get('/transaction/pdf',VerifyToken,checkOfflinePermission('Admin'),generateTransactionListPDF);

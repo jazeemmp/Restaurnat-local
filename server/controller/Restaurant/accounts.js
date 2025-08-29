@@ -66,6 +66,7 @@ export const createAccounts = async (req, res,next) => {
        
           createdById:user._id,
           createdBy:user.name,
+          isSynced:false,
       });
   
       await newAccount.save();
@@ -81,7 +82,6 @@ export const createAccounts = async (req, res,next) => {
 
 
   
-
   export const getAccounts = async(req,res,next)=>{
     try {
 
@@ -244,6 +244,7 @@ export const createAccounts = async (req, res,next) => {
           openingBalance,
           showInPos,
           parentAccountId: parentAccountId || null,
+          isSynced:false,
         },
         { new: true }
       );
@@ -260,6 +261,8 @@ export const createAccounts = async (req, res,next) => {
       next(err);
     }
   };
+
+
 
   export const deleteAccount = async (req, res, next) => {
     try {
@@ -319,7 +322,6 @@ export const createAccounts = async (req, res,next) => {
       next(err);
     }
   };
-  
 
 
 
@@ -706,6 +708,9 @@ export const generateTransactionListPDF = async (req, res, next) => {
   }
 };
 
+
+
+
 export const TransactionListExcel = async (req, res, next) => {
   try {
     const { accountId, fromDate, toDate, search = '', type } = req.query;
@@ -860,6 +865,7 @@ export const TransactionListExcel = async (req, res, next) => {
 
 
 
+
 export const createTransactionModule= async(req,res,next)=>{
   try {
     console.log(req.body)
@@ -907,6 +913,7 @@ export const createTransactionModule= async(req,res,next)=>{
       description: note || `Manual ${account.accountType} entry`,
       createdById: user._id,
       createdBy:user.name,
+      isSynced:false,
     };
 
     // Create CREDIT transaction in Payment (Cash/Bank/Card) account
@@ -920,6 +927,7 @@ export const createTransactionModule= async(req,res,next)=>{
       description: note || `Payment for ${accountType}`,
       createdById: user._id,
       createdBy:user.name,
+      isSynced:false,
     };
 
     await TRANSACTION.insertMany([debitTXn,creditTxn])
@@ -930,6 +938,8 @@ export const createTransactionModule= async(req,res,next)=>{
     next(err)
   }
 }
+
+
 
 
 export const getPurchseExpenceList = async (req, res, next) => {
@@ -1151,4 +1161,7 @@ export const generatePurchseExpencePDF = async (req, res, next) => {
     next(err);
   }
 };
+
+
+
 

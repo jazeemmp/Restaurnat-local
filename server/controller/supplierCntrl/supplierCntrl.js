@@ -48,6 +48,7 @@ export const createSupplier = async (req, res, next) => {
         createdBy: user.name,
          wallet: {
         credit: credit || 0,
+        isSynced:false,
   }
       });
 
@@ -171,6 +172,7 @@ export const updateSupplier = async (req, res, next) => {
     supplier.address = address?.trim() || "";
     supplier.trn = trn ||  null;
     supplier.wallet.credit = credit ;
+    supplier.isSynced = false;
 
     await supplier.save();
 

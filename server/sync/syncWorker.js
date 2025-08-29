@@ -10,7 +10,17 @@ import KITCHEN from '../model/kitchen.js';
 import CATEGORY from '../model/category.js';
 import FOOD from '../model/food.js';
 import MENU_TYPE from '../model/menuType.js';
-import CHOICE from '../model/choice.js'
+import CHOICE from '../model/choice.js';
+import COMBO from '../model/combo.js';
+import COMBO_GROUPS from '../model/comboGroup.js';
+import CUSTOMER from '../model/customer.js'
+import PAYMENT from '../model/paymentRecord.js'
+import TRANSACTION from '../model/transaction.js';
+import ACCOUNTS from '../model/account.js';
+import SUPPLIER from '../model/supplier.js';
+import INGREDIENT from '../model/ingredients.js'
+
+
 import path from 'path';
 import fs from 'fs';
 import FormData from "form-data";
@@ -273,8 +283,6 @@ export const syncMenuType = ()=> withOnlineCheck(async () => {
 
 
 
-
-
 export const syncFood = () =>
   withOnlineCheck(async () => {
     const unsyncedFood = await FOOD.find({ isSynced: false });
@@ -327,5 +335,277 @@ export const syncFood = () =>
     } catch (err) {
       console.error("Failed to sync food:", err.message);
     }
-  });
+  });``
+
+
+export const syncComboGroup = ()=> withOnlineCheck(async () => {
+
+    const unsycedComboGroup= await COMBO_GROUPS.find({ isSynced: false });
+    
+
+    if (!unsycedComboGroup.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/combo-group`, unsycedComboGroup);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsycedComboGroup.map(ct => ct._id);
+
+      await COMBO_GROUPS.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('combo group synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+export const syncCombo = () =>
+  withOnlineCheck(async () => {
+    const unSycnedCombo = await COMBO.find({ isSynced: false });
+    if (!unSycnedCombo.length) return;
+    try {
+      // Step 1: Upload images & replace local paths with uploaded URLs
+      for (const food of unSycnedCombo) {
+        if (food.image) {
+          const localPath = path.join(process.cwd(), food.image.replace(/^\//, "")); 
+         
+
+          if (fs.existsSync(localPath)) {
+            const formData = new FormData();
+            formData.append("file", fs.createReadStream(localPath));
+
+            const uploadRes = await axios.post(
+              `${process.env.ONLNE_SERVER_URL}/upload`,
+              formData,
+              { headers: formData.getHeaders() }
+            );
+         
+
+         if (uploadRes.data?.path) {
+          food.image = `${process.env.ONLNE_SERVER_URL.replace("/sync","")}${uploadRes.data.path}`; // prepend server URL
+     
+        }
+          }
+        }
+      }
+
+      // Step 2: Send updated food documents
+      const payload = unSycnedCombo.map((f) => ({
+        ...f.toObject(),
+        image: f.image, // make sure image is updated
+      }));
+
+      const response = await axios.post(
+        `${process.env.ONLNE_SERVER_URL}/combo`,
+        payload
+      );
+
+      if (response.status === 200) {
+        const ids = unSycnedCombo.map((ct) => ct._id);
+        await COMBO.updateMany(
+          { _id: { $in: ids } },
+          { $set: { isSynced: true, syncedAt: new Date() } }
+        );
+        console.log("Combo synced..");
+      }
+    } catch (err) {
+      console.error("Failed to sync Combo:", err.message);
+    }
+ });
+
+
+ export const syncCustomer = ()=> withOnlineCheck(async () => {
+
+    const unsyncedCustomer= await CUSTOMER.find({ isSynced: false });
+    
+
+    if (!unsyncedCustomer.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/customer`, unsyncedCustomer);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncedCustomer.map(ct => ct._id);
+
+      await CUSTOMER.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Customer synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncOrders = ()=> withOnlineCheck(async () => {
+
+    const unsyncedOrders= await ORDER.find({ isSynced: false });
+    
+
+    if (!unsyncedOrders.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/orders`, unsyncedOrders);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncedOrders.map(ct => ct._id);
+
+      await ORDER.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Order synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncPaymnetRecords = ()=> withOnlineCheck(async () => {
+
+    const unsycnedPayment = await PAYMENT.find({ isSynced: false });
+    
+
+    if (!unsycnedPayment.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/payment-record`,unsycnedPayment);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsycnedPayment.map(ct => ct._id);
+
+      await PAYMENT.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Payment synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+
+ export const syncTransaction = ()=> withOnlineCheck(async () => {
+
+    const unsyncTransaction= await TRANSACTION.find({ isSynced: false });
+    
+
+    if (!unsyncTransaction.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/transaction`,unsyncTransaction);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncTransaction.map(ct => ct._id);
+
+      await TRANSACTION.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Transaction synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncAccounts = ()=> withOnlineCheck(async () => {
+
+    const unsyncedAccounts= await ACCOUNTS.find({ isSynced: false });
+    
+
+    if (!unsyncedAccounts.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/account`,unsyncedAccounts);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncedAccounts.map(ct => ct._id);
+
+      await ACCOUNTS.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Account synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncSupplier = ()=> withOnlineCheck(async () => {
+
+    const unsyncedSupplier= await SUPPLIER.find({ isSynced: false });
+    
+
+    if (!unsyncedSupplier.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/supplier`,unsyncedSupplier);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncedSupplier.map(ct => ct._id);
+
+      await SUPPLIER.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('supplier synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncIngredients = ()=> withOnlineCheck(async () => {
+
+    const unsyncedIngredient= await INGREDIENT.find({ isSynced: false });
+    
+
+    if (!unsyncedIngredient.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/ingredient`,unsyncedIngredient);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncedIngredient.map(ct => ct._id);
+
+      await INGREDIENT.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Ingredient synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
 

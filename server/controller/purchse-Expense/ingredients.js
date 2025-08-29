@@ -42,6 +42,7 @@ export const createIngredient = async (req, res, next) => {
   purchaseUnit,
   createdById: user._id,
   createdBy: user.name,
+  isSynced:false,
 };
 
 const created = await INGREDIENT.create(ingredientData);
@@ -119,7 +120,8 @@ const created = await INGREDIENT.create(ingredientData);
     }
 
     if (ingredient) existing.ingredient = ingredient.trim();
-    if (purchaseUnit) existing.purchaseUnit = purchaseUnit;;
+    if (purchaseUnit) existing.purchaseUnit = purchaseUnit;
+    existing.isSynced = false;
     await existing.save();
 
     return res.status(200).json({ message:'Ingredient updated successfully!',data:existing})

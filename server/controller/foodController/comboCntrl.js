@@ -133,6 +133,7 @@ export const createCompo = async (req,res,next)=>{
                       restaurantId,
                       createdById: user._id,
                       createdBy:user.name,
+                      isSynced:false,
                  
                })
 
@@ -168,6 +169,7 @@ export const createCompo = async (req,res,next)=>{
             comboPrice,
             createdById:user._id,
             createdBy:user.name,
+            isSynced:false,
           })
           
 
@@ -306,6 +308,7 @@ export const createCompo = async (req,res,next)=>{
           restaurantId,
           createdById: user._id,
           createdBy:user.name,
+          isSynced:false,
         
         });
   
@@ -324,6 +327,7 @@ export const createCompo = async (req,res,next)=>{
       existingCombo.comboPrice = comboPrice;
       existingCombo.createdById = user._id;
       existingCombo.createdBy = user.name;
+      existingCombo.isSynced = false;
     
  
       await existingCombo.save();

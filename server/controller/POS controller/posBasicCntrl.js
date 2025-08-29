@@ -148,7 +148,7 @@ export const createCustomerForPOS = async (req,res,next)=>{
          credit: parseFloat((credit ?? 0).toFixed(2)),
         createdById:user._id,
         createdBy:user.name,
-      
+        isSynced:false,
       })
 
         return res.status(200).json({ data: customer })
@@ -209,6 +209,7 @@ export const createCustomerForAdmin = async (req,res,next)=>{
          credit: parseFloat((credit ?? 0).toFixed(2)),
         createdById:user._id,
         createdBy:user.name,
+        isSynced:false
       
       })
 
@@ -490,6 +491,7 @@ export const customerDelete = async (req, res, next) => {
       customer.mobileNo = mobileNo.trim();
       customer.address = address?.trim() || "";
       customer.credit = credit;
+      customer.isSynced = false;
   
       await customer.save();
   
@@ -582,6 +584,7 @@ export const payCustomerDue = async(req,res,next)=>{
           createdById: userId,
           createdBy:user.name,
           customerId: customer._id,
+          isSynced:false,
     });
 
        return res.status(200).json({
