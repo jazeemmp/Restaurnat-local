@@ -129,7 +129,8 @@ export const createExpense = async (req, res, next) => {
       grandTotal,
       isVatInclusive,
       createdById: user._id,
-      createdBy: user.name
+      createdBy: user.name,
+      isSynced:false,
     });
 
     const transactions = [];
@@ -160,6 +161,7 @@ export const createExpense = async (req, res, next) => {
         description: item.note || `Expense item`,
         createdById: user._id,
         createdBy: user.name,
+        isSynced:false,
       });
     }
 
@@ -178,6 +180,7 @@ export const createExpense = async (req, res, next) => {
       description: note || `Payment for Expense #${invoiceNo || "N/A"}`,
       createdById: user._id,
       createdBy: user.name,
+      isSynced:false,
     });
 
     // Save Transactions
@@ -514,6 +517,7 @@ export const updateExpense = async (req, res, next) => {
         isVatInclusive,
         createdById: user._id,
         createdBy: user.name,
+        isSynced:false,
       },
       { new: true }
     );
@@ -545,6 +549,7 @@ export const updateExpense = async (req, res, next) => {
         description: item.note || `Expense item`,
         createdById: user._id,
         createdBy: user.name,
+        isSynced:false,
       });
     }
 
@@ -562,6 +567,7 @@ export const updateExpense = async (req, res, next) => {
       description: note || `Payment for Expense #${invoiceNo || "N/A"}`,
       createdById: user._id,
       createdBy: user.name,
+      isSynced:false,
     });
 
     await TRANSACTION.insertMany(transactions);

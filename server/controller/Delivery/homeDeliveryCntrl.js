@@ -31,7 +31,8 @@ export const createRider = async (req, res, next) => {
       mobileNo,
       address,
       createdById: user._id,
-      createdBy: user.name
+      createdBy: user.name,
+      isSynced:false,
     });
 
     return res.status(200).json({ message: "Rider created successfully", data: rider });
@@ -117,6 +118,7 @@ export const updateRider = async (req, res, next) => {
     rider.name = name || rider.name;
     rider.mobileNo = mobileNo || rider.mobileNo;
     rider.address = address || rider.address;
+    rider.isSynced = false;
 
     await rider.save();
 
@@ -170,6 +172,7 @@ export const markOrderReadyForPickup = async (req, res, next) => {
     }
 
     order.status = "ReadyPickUp";
+    order.isSynced= false;
     
     await order.save();
 
@@ -211,6 +214,7 @@ export const assignRiderForOut = async (req, res, next) => {
     order.status = "OutForDelivery";
     order.riderId = riderId;
     order.pickupTime = new Date();
+    order.isSynced = false;
 
     await order.save();
 
@@ -242,6 +246,7 @@ export const completeHomeDelivery = async (req, res, next) => {
 
     order.status = "Completed";
     order.deliveredTime = new Date();
+    order.isSynced = false;
     await order.save();
 
     return res.status(200).json({ message: "Rider assigned and order marked as Out For Delivery!" });

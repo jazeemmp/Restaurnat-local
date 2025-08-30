@@ -279,6 +279,7 @@ export const createOrder = async (req, res, next) => {
       order.deliveryDate = deliveryDetails.deliveryDate || null
       order.deliveryTime = deliveryDetails.deliveryTime || null
       order.location = deliveryDetails.location;
+      order.isSynced= false;
     }
 
     if (isAdditionalOrder) {
@@ -1104,6 +1105,7 @@ printer.code128(popOrder.order_id, { height: 70 });
     io.to(`posTable-${popOrder.restaurantId._id}`).emit('single_table_update', updatedTable);
 
     popOrder.status = 'Printed';
+    popOrder.isSynced = false;
     await popOrder.save();
 
     printer.cut({ feed: 2 });

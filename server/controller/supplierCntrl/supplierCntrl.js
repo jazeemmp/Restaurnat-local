@@ -620,7 +620,8 @@ export const paySupplierDue = async (req, res, next) => {
       description: note || `Payment to Supplier: ${supplier.name}`,
       createdById: userId,
       createdBy: user.name,
-      supplierId: supplier._id
+      supplierId: supplier._id,
+      isSynced:false,
     });
 
     return res.status(200).json({

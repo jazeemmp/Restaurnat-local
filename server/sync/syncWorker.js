@@ -18,8 +18,12 @@ import PAYMENT from '../model/paymentRecord.js'
 import TRANSACTION from '../model/transaction.js';
 import ACCOUNTS from '../model/account.js';
 import SUPPLIER from '../model/supplier.js';
-import INGREDIENT from '../model/ingredients.js'
-
+import INGREDIENT from '../model/ingredients.js';
+import PURCHASE from '../model/purchase.js'
+import EXPENSE from '../model/expense.js';
+import RIDER from '../model/Riders.js';
+import PARTNER from '../model/partner.js';
+import DIVIDENT from '../model/dividentPay.js'
 
 import path from 'path';
 import fs from 'fs';
@@ -609,3 +613,138 @@ export const syncCombo = () =>
     }
 })
 
+
+
+ export const syncPurchase = ()=> withOnlineCheck(async () => {
+
+    const unsyncPurchase= await PURCHASE.find({ isSynced: false });
+    
+
+    if (!unsyncPurchase.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/purchase`,unsyncPurchase);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncPurchase.map(ct => ct._id);
+
+      await PURCHASE.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('purchase synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+
+ export const syncExpense = ()=> withOnlineCheck(async () => {
+
+    const unsyncExpense= await EXPENSE.find({ isSynced: false });
+    
+
+    if (!unsyncExpense.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/expense`,unsyncExpense);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncExpense.map(ct => ct._id);
+
+      await EXPENSE.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Expense synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncRider = ()=> withOnlineCheck(async () => {
+
+    const unsyncRider= await RIDER.find({ isSynced: false });
+    
+
+    if (!unsyncRider.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/rider`,unsyncRider);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncRider.map(ct => ct._id);
+
+      await RIDER.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Rider synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+
+ export const syncPartner = ()=> withOnlineCheck(async () => {
+
+    const unsyncpartner= await PARTNER.find({ isSynced: false });
+    
+
+    if (!unsyncpartner.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/partner`,unsyncpartner);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncpartner.map(ct => ct._id);
+
+      await PARTNER.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Partner synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})
+
+ export const syncDividend = ()=> withOnlineCheck(async () => {
+
+    const unsyncDividend= await DIVIDENT.find({ isSynced: false });
+    
+
+    if (!unsyncDividend.length) return;
+
+    try {
+      
+      const response = await axios.post(`${process.env.ONLNE_SERVER_URL}/dividend`,unsyncDividend);
+          if (response.status === 200) {
+      // Bulk update all those docs in one go
+      const ids = unsyncDividend.map(ct => ct._id);
+
+      await DIVIDENT.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isSynced: true, syncedAt: new Date() } }
+      );
+
+      console.log('Dividend synced..');
+    }
+    } catch (err) {
+      console.error(`Failed to sync`, err.message);
+    }
+})

@@ -84,6 +84,7 @@ export const createPurchase = async (req, res, next) => {
             purchaseUnit: item.purchaseUnit,
             createdById: user._id,
             createdBy: user.name,
+            isSynced:false,
           });
         }
 
@@ -120,6 +121,7 @@ export const createPurchase = async (req, res, next) => {
       createdById: user._id,
       isVatInclusive,
       createdBy:user.name,
+      isSynced:false,
     });
 
     // 2. Create transaction records
@@ -138,6 +140,7 @@ export const createPurchase = async (req, res, next) => {
       description: note || `Purchase from supplier #${invoiceNo}`,
       createdById: user._id,
       createdBy:user.name,
+      isSynced:false,
     };
 
     const paymentTxn = {
@@ -151,6 +154,7 @@ export const createPurchase = async (req, res, next) => {
       description:note || `Payment for Purchase #${invoiceNo}`,
       createdById: user._id,
       createdBy:user.name,
+      isSynced:false,
     };
 
     await TRANSACTION.insertMany([debitTxn, paymentTxn]);
@@ -424,6 +428,7 @@ export const updatePurchase = async (req, res, next) => {
             purchaseUnit: item.purchaseUnit,
             createdById: user._id,
             createdBy: user.name,
+            isSynced:false
           });
         }
 
@@ -463,7 +468,8 @@ export const updatePurchase = async (req, res, next) => {
         note,
         updatedById: user._id,
         createdBy: user.name,
-        createdById: user._id
+        createdById: user._id,
+        isSynced:false,
       },
       { new: true }
     );
@@ -487,6 +493,7 @@ export const updatePurchase = async (req, res, next) => {
       description: note || `Purchase from supplier #${invoiceNo}`,
       createdById: user._id,
       createdBy: user.name,
+      isSynced:false,
     };
 
     const creditTxn = {
@@ -500,6 +507,7 @@ export const updatePurchase = async (req, res, next) => {
       description: note || `Payment for Purchase #${invoiceNo}`,
       createdById: user._id,
       createdBy: user.name,
+      isSynced:false,
     };
 
     await TRANSACTION.insertMany([debitTxn, creditTxn]);

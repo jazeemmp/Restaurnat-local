@@ -54,7 +54,7 @@ export const addPartner = async (req, res, next) => {
         .json({ message: "Total partner percentage cannot exceed 100%" });
     }
 
-    const partner = await PARTNER.create({ name, percentage });
+    const partner = await PARTNER.create({ name, percentage ,isSynced:false });
 
     return res.status(201).json({ message: "Partner added successfully", partner });
   } catch (err) {
@@ -116,6 +116,7 @@ export const updatePartner = async (req, res, next) => {
 
     partner.name = name || partner.name;
     partner.percentage = percentage || partner.percentage;
+    partner.isSynced = false;
 
     await partner.save();
 
@@ -374,7 +375,8 @@ export const takePartnerDividend = async (req, res, next) => {
       referenceType: "Dividend",
       description: note || `Dividend payout to ${partner.name} for period ${start.toISOString().slice(0,10)} to ${end.toISOString().slice(0,10)}`,
       createdById: user._id,
-      createdBy: user.name
+      createdBy: user.name,
+      isSynced:false,
     });
 
     // === 5) Save payout record ===
@@ -392,7 +394,8 @@ export const takePartnerDividend = async (req, res, next) => {
       note,
       status: "Paid",
       createdById: user._id,
-      createdBy: user.name
+      createdBy: user.name,
+      isSynced:false
     });
 
     // const remaining = Number((available - amount).toFixed(2));

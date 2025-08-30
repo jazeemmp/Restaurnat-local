@@ -6,7 +6,7 @@ import UserRouter from './routes/UserRouter.js'
 import dotenv from 'dotenv';
 import {  attachSocketToRequest } from './middleware/attachSocket.js';
 import { initSocketServer}  from './config/socket.js'
-import { syncAccounts, syncCategory, syncCombo, syncComboGroup, syncCustomer, syncCustomerTypes, syncFloors, syncFood, syncIngredients, syncKitchen, syncMenuType, syncOrders, syncPaymnetRecords, syncRestaurant, syncSupplier, syncTables, syncTransaction, syncUser, synNormalUser } from "./sync/syncWorker.js";
+import { syncAccounts, syncCategory, syncCombo, syncComboGroup, syncCustomer, syncCustomerTypes, syncDividend, syncExpense, syncFloors, syncFood, syncIngredients, syncKitchen, syncMenuType, syncOrders, syncPartner, syncPaymnetRecords, syncPurchase, syncRestaurant, syncRider, syncSupplier, syncTables, syncTransaction, syncUser, synNormalUser } from "./sync/syncWorker.js";
 
 
 
@@ -66,6 +66,11 @@ app.use((err, req, res, next) => {
     setInterval(syncAccounts, 60 * 1000)
     setInterval(syncSupplier, 60 * 1000)
     setInterval(syncIngredients, 60 * 1000)
+    setInterval(syncPurchase, 60 * 1000)
+    setInterval(syncExpense, 60 * 1000)
+    setInterval(syncRider, 60 * 1000)
+    setInterval(syncPartner, 60 * 1000)
+    setInterval(syncDividend, 60 * 1000)
 
 
     const httpServer = http.createServer(app);
