@@ -486,6 +486,8 @@ export const updateFood = async (req, res, next) => {
     .webp({ quality: 70 })
     .toFile(resizedPath);
 
+    await new Promise(res => setTimeout(res, 100));
+
   try {
     await fs.promises.unlink(originalPath);  // safer async delete
   } catch (err) {
