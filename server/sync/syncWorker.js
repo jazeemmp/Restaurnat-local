@@ -310,7 +310,7 @@ export const syncFood = () =>
          
 
          if (uploadRes.data?.path) {
-          food.image = `${process.env.ONLNE_SERVER_URL.replace("/sync","")}${uploadRes.data.path}`; // prepend server URL
+          food.image = `${uploadRes.data.path}`; // prepend server URL
      
         }
           }
@@ -339,7 +339,7 @@ export const syncFood = () =>
     } catch (err) {
       console.error("Failed to sync food:", err.message);
     }
-  });``
+  });
 
 
 export const syncComboGroup = ()=> withOnlineCheck(async () => {
@@ -722,6 +722,8 @@ export const syncCombo = () =>
       console.error(`Failed to sync`, err.message);
     }
 })
+
+
 
  export const syncDividend = ()=> withOnlineCheck(async () => {
 

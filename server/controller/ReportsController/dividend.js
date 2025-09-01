@@ -511,6 +511,8 @@ export const getAvailablePartnerDividends = async (req, res, next) => {
 };
 
 
+
+
 // export const getPartnerDividendHistory = async (req, res, next) => {
 //   try {
 //     const { fromDate, toDate, search = '' } = req.query;
