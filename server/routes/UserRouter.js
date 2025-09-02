@@ -368,6 +368,7 @@ router.put('/partner',VerifyToken,checkOfflinePermission('Admin'),updatePartner)
 router.get('/partner',VerifyToken,checkOfflinePermission('Admin'),getPartners)
 router.delete('/partner/:partnerId',VerifyToken,checkOfflinePermission('Admin'),deletePartner);
 
+
 //dividend report
 router.get('/dividend',VerifyToken,checkOfflinePermission('Admin'),getDividendSharingReport);
 router.post('/dividend/pay',VerifyToken,checkOfflinePermission('Admin'),takePartnerDividend)

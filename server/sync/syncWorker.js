@@ -41,7 +41,7 @@ const withOnlineCheck = async (fn) => {
     console.log("No internet connection. Skipping sync...");
     return;
   }
-  console.log("Internet connected");
+  
   return fn();
 };
 
@@ -392,7 +392,7 @@ export const syncCombo = () =>
          
 
          if (uploadRes.data?.path) {
-          food.image = `${process.env.ONLNE_SERVER_URL.replace("/sync","")}${uploadRes.data.path}`; // prepend server URL
+          food.image =`${uploadRes.data.path}`; // prepend server URL
      
         }
           }

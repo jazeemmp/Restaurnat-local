@@ -116,9 +116,12 @@ export const createAccounts = async (req, res,next) => {
       }
     ]);
 
+    
+
     // Step 1: Build initial balance map
     const balanceMap = {};
     transactions.forEach(tx => {
+      if (!tx._id) return
       balanceMap[tx._id.toString()] = {
         credit: tx.totalCredit || 0,
         debit: tx.totalDebit || 0,
