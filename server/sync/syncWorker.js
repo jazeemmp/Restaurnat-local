@@ -35,7 +35,7 @@ dotenv.config();
 
 
 
-const withOnlineCheck = async (fn) => {
+export const withOnlineCheck = async (fn) => {
   const online = await isOnline();
   if (!online) {
     console.log("No internet connection. Skipping sync...");

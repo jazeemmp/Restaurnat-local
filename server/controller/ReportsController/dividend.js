@@ -8,7 +8,11 @@ import PAYMENT_RECORD from '../../model/paymentRecord.js'
 import PURCHASE from '../../model/purchase.js'
 import ACCOUNTS from '../../model/account.js'
 import PARTNER_DIVIDEND_PAYOUT from '../../model/dividentPay.js'
-import { generateUniqueRefId } from '../POS controller/posOrderCntrl.js'
+import { generateUniqueRefId } from '../POS controller/posOrderCntrl.js';
+import { withOnlineCheck } from '../../sync/syncWorker.js';
+import axios from 'axios';
+import dotenv from 'dotenv';
+dotenv.config();
 
 
 
@@ -141,6 +145,15 @@ export const deletePartner = async (req, res, next) => {
     const partner = await PARTNER.findByIdAndDelete(partnerId);
     if (!partner) {
       return res.status(404).json({ message: "Partner not found" });
+    }
+
+      try {
+        console.log(`${process.env.ONLNE_SERVER_URL}/delete-partner`)
+      await axios.post(`${process.env.ONLNE_SERVER_URL}/delete-partner`, {
+        _id: partnerId
+      });
+    } catch (err) {
+      console.error("Failed to sync partner deletion online:",err.message);
     }
 
     return res.status(200).json({ message: "Partner deleted successfully" });
