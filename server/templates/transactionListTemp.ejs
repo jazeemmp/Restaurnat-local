@@ -36,6 +36,7 @@
   <table>
     <thead>
       <tr>
+        <th>No.</th>
         <th class="nowrap">Date</th>
         <th class="nowrap">Reference No</th>
         <th class="nowrap">Reference Type</th>
@@ -48,9 +49,10 @@
       <% if (!data.length) { %>
         <tr><td colspan="6" style="text-align:center;">No records found.</td></tr>
       <% } else { %>
-        <% data.forEach(item => { %>
+        <% data.forEach((item,index) => { %>
           <tr>
             <td><%= item.date %></td>
+             <td class="nowrap"><%= index + 1 %></td>
             <td><%= item.referenceId || '-' %></td>
             <td><%= item.referenceType || '-' %></td>
             <td><%= item.type === 'Credit' ? item.amount.toFixed(2) : '0.00' %></td>

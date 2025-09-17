@@ -5,6 +5,7 @@ import TRANSACTION from '../../model/transaction.js';
 import EXPENSE from '../../model/expense.js'
 import PURCHASE from '../../model/purchase.js'
 import mongoose from 'mongoose';
+import { generatePDF } from '../../config/pdfGeneration.js';
 
 
 export const createSupplier = async (req, res, next) => {

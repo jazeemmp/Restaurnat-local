@@ -99,6 +99,7 @@
     <table>
       <thead>
         <tr>
+          <th class="nowrap">No.</th>
           <th class="nowrap">Date</th>
           <th>Ref Type</th>
           <th>Ref ID</th>
@@ -114,8 +115,9 @@
             <td colspan="7" style="text-align: center;">No data available.</td>
           </tr>
         <% } else { %>
-          <% transactions.forEach(item => { %>
+          <% transactions.forEach((item,index) => { %>
             <tr>
+              <td><%= index + 1 %></td>
               <td class="nowrap"><%= new Date(item.createdAt).toLocaleDateString() %></td>
               <td><%= item.referenceType || '-' %></td>
               <td><%= item.referenceId || '-' %></td>

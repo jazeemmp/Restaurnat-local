@@ -771,14 +771,22 @@ export const TransactionListExcel = async (req, res, next) => {
       { $sort: { createdAt: 1 } }
     ];
 
+   
     const transactions = await TRANSACTION.aggregate(pipeline);
 
-    // Add running total
+    // Track running total and sums
     let runningTotal = mainAccount.openingBalance || 0;
-    const enriched = transactions.map((txn) => {
+    let totalCredit = 0;
+    let totalDebit = 0;
+
+    const enriched = transactions.map((txn, idx) => {
       const delta = txn.type === "Credit" ? txn.amount : -txn.amount;
       runningTotal += delta;
+      if (txn.type === "Credit") totalCredit += txn.amount;
+      if (txn.type === "Debit") totalDebit += txn.amount;
+
       return {
+        sno: idx + 1,
         date: txn.createdAt,
         referenceId: txn.referenceId,
         referenceType: txn.referenceType,
@@ -790,12 +798,14 @@ export const TransactionListExcel = async (req, res, next) => {
       };
     });
 
+    const finalBalance = (mainAccount.openingBalance || 0) + totalCredit - totalDebit;
+
     // Create Excel
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Accounts Report");
 
     // Title
-    worksheet.mergeCells("A1", "H1");
+    worksheet.mergeCells("A1", "I1");
     worksheet.getCell("A1").value = "Accounts History";
     worksheet.getCell("A1").font = { bold: true, size: 16 };
     worksheet.getCell("A1").alignment = { horizontal: "center" };
@@ -811,6 +821,7 @@ export const TransactionListExcel = async (req, res, next) => {
 
     // Headers
     const headers = [
+      "S.No",
       "Date",
       "Reference No",
       "Reference Type",
@@ -823,11 +834,6 @@ export const TransactionListExcel = async (req, res, next) => {
 
     worksheet.addRow(headers).eachCell(cell => {
       cell.font = { bold: true };
-      // cell.fill = {
-      //   type: "pattern",
-      //   pattern: "solid",
-      //   fgColor: { argb: "FFD3D3D3" }
-      // };
       cell.border = {
         top: { style: "thin" },
         left: { style: "thin" },
@@ -839,6 +845,7 @@ export const TransactionListExcel = async (req, res, next) => {
     // Data rows
     enriched.forEach(txn => {
       worksheet.addRow([
+        txn.sno,
         txn.date.toISOString().split("T")[0],
         txn.referenceId,
         txn.referenceType,
@@ -852,6 +859,28 @@ export const TransactionListExcel = async (req, res, next) => {
 
     worksheet.columns.forEach(col => {
       col.width = 18;
+    });
+
+    // Totals Row
+    const totalRow = worksheet.addRow([
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Totals:",
+      totalCredit,
+      totalDebit,
+      finalBalance
+    ]);
+    totalRow.font = { bold: true };
+    totalRow.eachCell(cell => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "double" },
+        right: { style: "thin" }
+      };
     });
 
     // Export

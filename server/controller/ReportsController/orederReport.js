@@ -1059,27 +1059,27 @@ if (filters.length > 0) {
 
 // Add column headings manually
 const headerRow = worksheet.addRow([
-  "Date", "Order ID", "KOT", "Customer", "Customer Type", "Payment Methods", "Discount","Amount","Status"
+  "S.No", "Date", "Order ID", "KOT", "Customer", "Customer Type", "Payment Methods", "Discount","Amount","Status"
 ]);
 
 headerRow.eachCell((cell) => {
   cell.font = { bold: true };
 });
 
-    worksheet.columns = [
-      {key: "date", width: 20 },
-      {key: "orderId", width: 30 },
-      {key: "kot", width: 15 },
-      {key: "customer", width: 25 },
-      {key: "customerType", width: 20 },
-      {key: "payments", width: 30 },
-      { key: "discount", width: 15 },
-      { key: "amount", width: 15 },
-      { key: "status", width: 15 },
-    ];
+worksheet.columns = [
+  { key: "sno", width: 8 },
+  { key: "date", width: 20 },
+  { key: "orderId", width: 30 },
+  { key: "kot", width: 15 },
+  { key: "customer", width: 25 },
+  { key: "customerType", width: 20 },
+  { key: "payments", width: 30 },
+  { key: "discount", width: 15 },
+  { key: "amount", width: 15 },
+  { key: "status", width: 15 },
+];
 
-
- data.forEach((order) => {
+data.forEach((order, index) => {
   const paymentString =
     Array.isArray(order.paymentMethods) && order.paymentMethods.length > 0
       ? order.paymentMethods
@@ -1089,6 +1089,7 @@ headerRow.eachCell((cell) => {
       : "Pending";
 
   worksheet.addRow([
+    index + 1, // 👈 S.No
     new Date(order.date),
     order.orderId || "-",
     order.kot || "-",
@@ -1100,6 +1101,7 @@ headerRow.eachCell((cell) => {
     order.status || "-",
   ]);
 });
+
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", "attachment; filename=OrderSummary.xlsx");
@@ -1242,14 +1244,17 @@ if (filters.length > 0) {
 
 
     // Column Headings
+
+    // Column Headings
     const headerRow = worksheet.addRow([
-      "Date", "Order Id", "Customer Type", "Amount", "KOT"
+      "S.No", "Date", "Order Id", "Customer Type", "Amount", "KOT"
     ]);
     headerRow.eachCell((cell) => {
       cell.font = { bold: true };
     });
 
     worksheet.columns = [
+      { key: "sno", width: 8 },
       { key: "date", width: 20 },
       { key: "orderId", width: 30 },
       { key: "customerType", width: 30 },
@@ -1257,13 +1262,14 @@ if (filters.length > 0) {
       { key: "kot", width: 15 },
     ];
 
-    // Data Rows
-    data.forEach((order) => {
+    // Data Rows with Index
+    data.forEach((order, index) => {
       const customerTypeWithTable = order.customerType
         ? `${order.customerType}${order.tableName ? ` (${order.tableName})` : ""}`
         : "N/A";
 
       worksheet.addRow({
+        sno: index + 1, // 👈 Serial Number
         date: new Date(order.createdAt),
         orderId: order.order_id || "-",
         customerType: customerTypeWithTable,

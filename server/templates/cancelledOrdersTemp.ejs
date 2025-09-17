@@ -56,6 +56,7 @@
   <table>
     <thead>
       <tr>
+         <th>No.</th>
         <th class="nowrap">Date</th>
         <th class="nowrap">Order ID</th>
         <th class="nowrap">Customer Type</th>
@@ -69,8 +70,9 @@
           <td colspan="5" style="text-align: center;">No data available for selected filters.</td>
         </tr>
       <% } else { %>
-        <% data.forEach((item) => { %>
+        <% data.forEach((item,index) => { %>
           <tr>
+             <td class="nowrap"><%= index + 1 %></td>
             <td><%= item.createdDate %></td>
             <td><%= item.order_id || item.orderNo %></td>
             <td><%= item.customerType || '-' %></td>

@@ -842,6 +842,7 @@ export const generateVATReportExcel = async (req, res, next) => {
     // === VAT Transactions Table ===
     worksheet.addRow(["VAT Transactions"]).font = { bold: true };
     const tableHeader = [
+      "S.No",
       "Date",
       "Type",
       "Reference",
@@ -855,8 +856,9 @@ export const generateVATReportExcel = async (req, res, next) => {
       cell.alignment = { horizontal: "center" };
     });
 
-    transactionsAgg.forEach(txn => {
+    transactionsAgg.forEach((txn,index) => {
       worksheet.addRow([
+        index + 1,
         txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : "-",
         txn.referenceType || "-",
         txn.referenceId || "-",
