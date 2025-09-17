@@ -76,6 +76,7 @@
   <table>
     <thead>
       <tr>
+        <th class="nowrap">No.</th>
         <th class="nowrap">Date</th>
         <th class="nowrap">Reference No</th>
         <th class="nowrap">Account Type</th>
@@ -91,19 +92,20 @@
           <td colspan="7" style="text-align: center;">No data available.</td>
         </tr>
       <% } else { %>
-        <% data.forEach(item => { %>
-          <tr>
-            <td class="nowrap"><%= new Date(item.createdAt).toLocaleDateString() %></td>
-            <td><%= item.referenceId || '-' %></td>
-            <td><%= item.accountType || '-' %></td>
-            <td><%= item.accountName || '-' %></td>
-            <td><%= item.paymentMethod || '-' %></td>
-            <td><%= item.supplierName || '-' %></td>
-            <td class="nowrap"><%= item.amount?.toFixed(2) || '0.00' %></td>
-          </tr>
-        <% }) %>
+      <% data.forEach((item, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td class="nowrap"><%= new Date(item.createdAt).toLocaleDateString() %></td>
+          <td><%= item.referenceId || '-' %></td>
+          <td><%= item.accountType || '-' %></td>
+          <td><%= item.accountName || '-' %></td>
+          <td><%= item.paymentMethod || '-' %></td>
+          <td><%= item.supplierName || '-' %></td>
+          <td class="nowrap"><%= item.amount?.toFixed(2) || '0.00' %></td>
+        </tr>
+      <% }) %>
         <tr class="total-row">
-          <td colspan="6" class="nowrap">Total</td>
+          <td colspan="7" class="nowrap">Total</td>
           <td class="nowrap"><%= totalAmount?.toFixed(2) || '0.00' %></td>
         </tr>
       <% } %>

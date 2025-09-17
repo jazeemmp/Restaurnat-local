@@ -886,6 +886,7 @@ export const getDailyTransactionReport = async (req, res, next) => {
 
 
 
+
 export const getDailyTransactionPDF = async (req, res, next) => {
   try {
     const {
@@ -1148,6 +1149,16 @@ export const paymentSummaryExcel = async (req, res, next) => {
         : []),
     ]);
 
+        // === Calculate Total ===
+    const totalCollected = allPayments.reduce(
+      (sum, p) => sum + (p.amount || 0),
+      0
+    );
+    const totalTransactions = allPayments.reduce(
+      (sum, p) => sum + (p.count || 0),
+      0
+    );
+
     // === Create Excel Workbook ===
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Payment Summary");
@@ -1170,30 +1181,54 @@ export const paymentSummaryExcel = async (req, res, next) => {
     }
 
     // Column Headings
-    const headerRow = ws.addRow(["Payment Type", "Amount", "No of Transaction"]);
+const headerRow = ws.addRow([
+      "S.No.",
+      "Payment Type",
+      "Amount",
+      "No of Transactions",
+    ]);
     headerRow.eachCell((cell) => {
       cell.font = { bold: true };
     });
 
-    // Add Data Rows
-    allPayments.forEach((payment) => {
+    // Add Data Rows with index
+    allPayments.forEach((payment, i) => {
       ws.addRow([
+        i + 1,
         payment.type,
         payment.amount,
         payment.count,
       ]);
     });
 
-    // Set Column Widths (optional for better readability)
+    // Totals Row
+    const totalRow = ws.addRow([
+      "",
+      "Grand Total",
+      totalCollected,
+      totalTransactions,
+    ]);
+    totalRow.eachCell((cell) => {
+      cell.font = { bold: true };
+    });
+
+    // Set Column Widths
     ws.columns = [
-      { width: 30 },
-      { width: 15 },
-      { width: 20 },
+      { width: 10 }, // S.No.
+      { width: 30 }, // Payment Type
+      { width: 15 }, // Amount
+      { width: 20 }, // No of Transactions
     ];
 
     // Set response headers
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=payment_summary.xlsx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=payment_summary.xlsx`
+    );
 
     await wb.xlsx.write(res);
     res.end();

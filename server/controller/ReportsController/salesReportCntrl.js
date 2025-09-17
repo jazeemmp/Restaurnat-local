@@ -162,7 +162,7 @@ export const getDailySalesReport = async (req, res, next) => {
         {
           $group: {
             _id: null,
-            totalAmount: { $sum: "$grandTotal" },
+            totalAmount: { $sum: "$amount" },
             totalVAT: { $sum: "$vatAmount" }
           }
         }
@@ -355,12 +355,21 @@ export const getCategoryWiseSalesReport = async (req, res, next) => {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
           totalCount: [{ $count: "count" }],
+              totals: [
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$totalSales" }
+        }
+      }
+    ]
         },
       },
       {
         $project: {
           data: 1,
           totalCount: { $arrayElemAt: ["$totalCount.count", 0] },
+           totalAmount: { $ifNull: [{ $arrayElemAt: ["$totals.totalAmount", 0] }, 0] }
         },
       },
     ]);
@@ -368,6 +377,7 @@ export const getCategoryWiseSalesReport = async (req, res, next) => {
     const response = {
       data: data[0]?.data || [],
       totalCount: data[0]?.totalCount || 0,
+      totalAmount: data[0]?.totalAmount || 0,
       page,
       limit,
     };
@@ -552,12 +562,21 @@ export const getItemWiseSalesReport = async (req, res, next) => {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
           totalCount: [{ $count: "count" }],
+              totals: [
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$totalSales" }
+        }
+      }
+    ]
         },
       },
       {
         $project: {
           data: 1,
           totalCount: { $arrayElemAt: ["$totalCount.count", 0] },
+          totalAmount: { $ifNull: [{ $arrayElemAt: ["$totals.totalAmount", 0] }, 0] }
         },
       },
     ]);
@@ -565,6 +584,7 @@ export const getItemWiseSalesReport = async (req, res, next) => {
     const response = {
       data: data[0]?.data || [],
       totalCount: data[0]?.totalCount || 0,
+       totalAmount: data[0]?.totalAmount || 0,
       page,
       limit,
     };
@@ -659,12 +679,23 @@ export const getCustomerTypeWiseSalesReport = async (req, res, next) => {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
           totalCount: [{ $count: "count" }],
+              totals: [
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$totalSales" }
+        }
+      }
+    ]
+  
         },
       },
       {
         $project: {
           data: 1,
           totalCount: { $arrayElemAt: ["$totalCount.count", 0] },
+           totalAmount: { $ifNull: [{ $arrayElemAt: ["$totals.totalAmount", 0] }, 0] }
+        
         },
       },
     ];
@@ -674,6 +705,7 @@ export const getCustomerTypeWiseSalesReport = async (req, res, next) => {
     const response = {
       data: result[0]?.data || [],
       totalCount: result[0]?.totalCount || 0,
+      totalAmount: result[0]?.totalAmount || 0,
       page,
       limit,
     };
@@ -831,6 +863,12 @@ export const generateDailySalesPDF = async (req, res, next) => {
     // 9. Execute aggregation
     const result = await PAYMENT.aggregate(pipeline);
 
+    // 10. Calculate totals
+        let totalAmount = 0;
+        if (result.length > 0) {
+          totalAmount = result.reduce((sum, r) => sum + (r.amount || 0), 0);
+        }
+
     // 10. Look up readable customer type for header
     let customerTypeLabel = null;
     if (customerTypeId) {
@@ -842,6 +880,7 @@ export const generateDailySalesPDF = async (req, res, next) => {
     const pdfBuffer = await generatePDF("dailySaleTemp", {
       data: result,
       currency,
+      totalAmount: totalAmount.toFixed(2),
       filters: {
         fromDate, toDate, paymentMethod,
         customerType: customerTypeLabel,
@@ -993,7 +1032,7 @@ export const generateCategorySalesPDF = async (req, res, next) => {
       },
       { $unwind: "$all" },
 
-      // ✅ Apply minPrice and maxPrice filter if present
+      //  Apply minPrice and maxPrice filter if present
       ...(Object.keys(priceFilter).length
         ? [{ $match: { "all.totalSales": priceFilter } }]
         : []),
@@ -1016,10 +1055,15 @@ export const generateCategorySalesPDF = async (req, res, next) => {
     ];
 
     const result = await ORDER.aggregate(pipeline);
+    let totalAmount = 0;
+if (result.length > 0) {
+  totalAmount = result.reduce((sum, r) => sum + (r.totalSales || 0), 0);
+}
 
     const pdfBuffer = await generatePDF("categorySalesTemp", {
       data: result,
       currency,
+      totalAmount: totalAmount.toFixed(2),
       filters: { search, minPrice, maxPrice },
     });
 
@@ -1202,10 +1246,15 @@ export const generateItemWiseSalesPDF = async (req, res, next) => {
     ];
 
     const result = await ORDER.aggregate(pipeline);
+    let totalAmount = 0;
+if (result.length > 0) {
+  totalAmount = result.reduce((sum, r) => sum + (r.totalSales || 0), 0);
+}
 
     const pdfBuffer = await generatePDF("itemSalesTemp", {
       data: result,
       currency,
+       totalAmount: totalAmount.toFixed(2),
       filters: {
         search,
         minPrice: !isNaN(min) ? min : undefined,
@@ -1308,10 +1357,15 @@ export const generateCustomerTypeWisePDF = async (req, res, next) => {
     ];
 
     const result = await ORDER.aggregate(pipeline);
+    let totalAmount = 0;
+if (result.length > 0) {
+  totalAmount = result.reduce((sum, r) => sum + (r.totalSales || 0), 0);
+}
 
     const pdfBuffer = await generatePDF("customerTypeSalesTemp", {
       data: result,
       currency,
+      totalAmount: totalAmount.toFixed(2),
       filters: {
         search,
         minPrice: !isNaN(min) ? min : null,
@@ -1505,7 +1559,7 @@ if (filters.length > 0) {
 
 // Add column headings manually
 const headerRow = worksheet.addRow([
-  "Date", "Order ID", "Order No", "Customer Type", "Discount", "Payment Methods", "Amount"
+  "S.No", "Date", "Order ID", "Order No", "Customer Type", "Discount", "Payment Methods", "Amount"
 ]);
 
 // Make header row bold
@@ -1515,6 +1569,7 @@ headerRow.eachCell((cell) => {
 
 // Set column widths
 worksheet.columns = [
+   { key: "sno", width: 8 },
   { key: "date", width: 20 },
   { key: "orderId", width: 20 },
   { key: "orderNo", width: 15 },
@@ -1525,18 +1580,43 @@ worksheet.columns = [
 ];
 
 // Add rows
-data.forEach((item) => {
-  const paymentMethodsStr = item.paymentMethods.map(pm => `${pm.type}: ${pm.amount}`).join(", ");
+data.forEach((item, index) => {
+  const paymentMethodsStr = item.paymentMethods
+    .map(pm => `${pm.type}: ${pm.amount}`)
+    .join(", ");
+
   worksheet.addRow({
+    sno: index + 1, // 🔹 Serial number
     date: new Date(item.date),
     orderId: item.orderId,
     orderNo: item.orderNo,
-    customerType: item.customerType || '-',
+    customerType: item.customerType || "-",
     discount: item.discount || 0,
     paymentMethods: paymentMethodsStr,
     amount: item.amount
   });
 });
+
+let totalAmount = 0;
+if (data.length > 0) {
+  totalAmount = data.reduce((sum, r) => sum + (r.amount || 0), 0);
+}
+    const totalRow = worksheet.addRow({
+       sno: "",
+      date: "",
+      orderId: "",
+      orderNo: "",
+      customerType: "",
+      discount: "",
+      paymentMethods: "Total:",
+      amount: totalAmount
+    });
+
+    // Make total row bold & add top border
+    totalRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.border = { top: { style: "thin" } };
+    });
 
     // Set response headers
     res.setHeader(
@@ -1750,6 +1830,7 @@ if (filters.length > 0) {
 
 // Add column headings manually
 const headerRow = worksheet.addRow([
+    "S.No",
   "Category",
   "Total Qty",
   "Total Orders",
@@ -1763,36 +1844,52 @@ headerRow.eachCell((cell) => {
 
 // Set column widths
 worksheet.columns = [
+   { key: "sno", width: 8 },
   { key: "categoryName", width: 30 },
   { key: "totalQty", width: 15 },
   { key: "totalOrders", width: 15 },
   { key: "totalSales", width: 20 }
 ];
 
-// Add data rows
-result.forEach(item => {
-  worksheet.addRow({
-    categoryName: item.categoryName,
-    totalQty: item.totalQty,
-    totalOrders: item.totalOrders,
-    totalSales: item.totalSales
-  });
-});
+    // Add data rows
+    result.forEach((item, index) => {
+      worksheet.addRow({
+        sno: index + 1,
+        categoryName: item.categoryName,
+        totalQty: item.totalQty,
+        totalOrders: item.totalOrders,
+        totalSales: item.totalSales,
+      });
+    });
 
-// Grand Total Row
-const totalRow = worksheet.addRow({
-  categoryName: "Grand Total",
-  totalQty: { formula: `SUM(B4:B${result.length + 3})` },
-  totalOrders: { formula: `SUM(C4:C${result.length + 3})` },
-  totalSales: { formula: `SUM(D4:D${result.length + 3})` }
-});
+    // === Grand Total Row ===
+    const totalSalesSum = result.reduce(
+      (sum, r) => sum + (r.totalSales || 0),
+      0
+    );
 
-totalRow.eachCell(cell => {
-  cell.font = { bold: true };
-});
+    const totalRow = worksheet.addRow({
+      sno: "",
+      categoryName: "",
+      totalQty: "",
+      totalOrders: "Grand Total:",
+      totalSales: totalSalesSum,
+    });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=category-sales-${Date.now()}.xlsx`);
+    totalRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.border = { top: { style: "thin" } };
+    });
+
+    // Response
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=category-sales-${Date.now()}.xlsx`
+    );
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
@@ -1970,86 +2067,83 @@ export const itemWiseSalesExcel = async (req, res, next) => {
 
     const result = await ORDER.aggregate(pipeline);
 
-    // Generate Excel
-   // Generate Excel
-const wb = new ExcelJS.Workbook();
-const ws = wb.addWorksheet("Item Sales");
+    // Excel Generation
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Item Sales");
 
-// Title Row (merged + bold)
-ws.mergeCells("A1:E1");
-const titleCell = ws.getCell("A1");
-titleCell.value = "Item Sales Report";
-titleCell.font = { size: 16, bold: true };
-titleCell.alignment = { vertical: "middle", horizontal: "center" };
+    // Title Row
+    ws.mergeCells("A1:F1");
+    const titleCell = ws.getCell("A1");
+    titleCell.value = "Item Sales Report";
+    titleCell.font = { size: 16, bold: true };
+    titleCell.alignment = { vertical: "middle", horizontal: "center" };
 
-// Build filter summary row
-const filters = [];
-if (!isNaN(min) || !isNaN(max)) {
-  const minVal = isNaN(min) ? 0 : min;
-  const maxVal = isNaN(max) ? "∞" : max;
-  filters.push(`Total Sales: ${minVal} to ${maxVal} ${currency}`);
-}
-if (search) {
-  filters.push(`Search: "${search}"`);
-}
+    // Filter Summary
+    const filters = [];
+    if (!isNaN(min) || !isNaN(max)) {
+      const minVal = isNaN(min) ? 0 : min;
+      const maxVal = isNaN(max) ? "∞" : max;
+      filters.push(`Total Sales: ${minVal} to ${maxVal} ${currency}`);
+    }
+    if (search) filters.push(`Search: "${search}"`);
 
-if (filters.length > 0) {
-  const filterRow = ws.addRow(filters);
-  filterRow.eachCell((cell) => {
-    cell.font = { bold: true };
-    cell.alignment = { vertical: "middle", horizontal: "left" };
-  });
-  ws.addRow([]); // Spacer row after filters
-} else {
-  ws.addRow([]); // Spacer row if no filters
-}
+    if (filters.length > 0) {
+      const filterRow = ws.addRow(filters);
+      filterRow.eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+      ws.addRow([]); // spacer
+    } else {
+      ws.addRow([]);
+    }
 
-// Column Headers
-const headerRow = ws.addRow([
-  "Item Name",
-  "Category",
-  "Total Qty",
-  "Total Orders",
-  `Total Sales (${currency})`,
-]);
+    // Column Headers (added Index column "#")
+    const headerRow = ws.addRow([
+      "Item Name",
+      "Category",
+      "Total Qty",
+      "Total Orders",
+      `Total Sales (${currency})`,
+    ]);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+    });
 
-// Make headers bold
-headerRow.eachCell((cell) => {
-  cell.font = { bold: true };
-});
+    ws.columns = [
+      { key: "index", width: 5 },
+      { key: "itemName", width: 30 },
+      { key: "category", width: 20 },
+      { key: "totalQty", width: 15 },
+      { key: "totalOrders", width: 15 },
+      { key: "totalSales", width: 20 },
+    ];
 
-// Set column widths
-ws.columns = [
-  { key: "itemName", width: 30 },
-  { key: "category", width: 20 },
-  { key: "totalQty", width: 15 },
-  { key: "totalOrders", width: 15 },
-  { key: "totalSales", width: 20 },
-];
+    // Data Rows with index numbers
+    result.forEach((r, i) => {
+      ws.addRow({
+        index: i + 1,
+        itemName: r.itemName,
+        category: r.category,
+        totalQty: r.totalQty,
+        totalOrders: r.totalOrders,
+        totalSales: r.totalSales,
+      });
+    });
 
-// Data Rows
-result.forEach((r) => {
-  ws.addRow({
-    itemName: r.itemName,
-    category: r.category,
-    totalQty: r.totalQty,
-    totalOrders: r.totalOrders,
-    totalSales: r.totalSales,
-  });
-});
+    // Totals Row
+    const totalRow = ws.addRow({
+      index: "",
+      itemName: "Grand Total",
+      totalQty: { formula: `SUM(D${headerRow.number + 1}:D${result.length + headerRow.number})` },
+      totalOrders: { formula: `SUM(E${headerRow.number + 1}:E${result.length + headerRow.number})` },
+      totalSales: { formula: `SUM(F${headerRow.number + 1}:F${result.length + headerRow.number})` },
+    });
+    totalRow.eachCell((cell) => {
+      cell.font = { bold: true };
+    });
 
-// Totals Row
-const totalRow = ws.addRow({
-  itemName: "Grand Total",
-  totalQty: { formula: `SUM(C4:C${result.length + 3})` },
-  totalOrders: { formula: `SUM(D4:D${result.length + 3})` },
-  totalSales: { formula: `SUM(E4:E${result.length + 3})` },
-});
-totalRow.eachCell((cell) => {
-  cell.font = { bold: true };
-});
-
-
+    // Response
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -2065,6 +2159,7 @@ totalRow.eachCell((cell) => {
     next(err);
   }
 };
+
 
 
 export const customerTypeWiseSalesExcel = async (req, res, next) => {
@@ -2197,7 +2292,7 @@ export const customerTypeWiseSalesExcel = async (req, res, next) => {
 
     // Grand total row (bold)
     const totalRow = ws.addRow({
-      customerType: "Grand Total",
+      customerType: "Total",
       totalQty,
       totalSales,
       orderCount,
