@@ -416,225 +416,6 @@ export const generateDailyCollectionPDF = async (req, res, next) => {
 };
 
 
-// export const getDailyTransactionReport = async (req, res, next) => {
-//   try {
-//     const {
-//       fromDate,
-//       toDate, 
-//       search = '',
-//       type,
-//       accountName = '', 
-//       accountType = '',
-//       paymentModeName = '',
-//     } = req.query;
-
-//     console.log(accountName,'accountName')
-//     console.log(paymentModeName,'pari')
-
-//     const limit = parseInt(req.query.limit) || 20;
-//     const page = parseInt(req.query.page) || 1;
-//     const skip = (page - 1) * limit;
-
-//     const user = await USER.findById(req.user);
-//     if (!user) return res.status(400).json({ message: "User not found!" });
-
-//     const matchStage = {};
-
-//     if (type) {
-//       matchStage.type = type;
-//     }
-
-//     if (fromDate && toDate) {
-//       const start = new Date(fromDate);
-//       const end = new Date(toDate);
-//       end.setHours(23, 59, 59, 999);
-//       matchStage.createdAt = { $gte: start, $lte: end };
-//     }
-
-//     const searchStage = search
-//       ? {
-//           $or: [
-//             { referenceId: { $regex: search, $options: 'i' } },
-//             { referenceType: { $regex: search, $options: 'i' } },
-//             { narration: { $regex: search, $options: 'i' } },
-//           ]
-//         }
-//       : null;
-
-//     const pipeline = [
-//       { $match: matchStage },
-//       ...(searchStage ? [{ $match: searchStage }] : []),
-
-//       // Lookup for account info
-//       {
-//         $lookup: {
-//           from: "accounts",
-//           localField: "accountId",
-//           foreignField: "_id",
-//           as: "accountInfo"
-//         }
-//       },
-//       { $unwind: "$accountInfo" },
-
-//       // Lookup for payment mode info
-//       {
-//         $lookup: {
-//           from: "accounts",
-//           localField: "paymentType",
-//           foreignField: "_id",
-//           as: "paymentTypeInfo"
-//         }
-//       },
-//       { $unwind: { path: "$paymentTypeInfo", preserveNullAndEmptyArrays: true } },
-
-//       // Filters based on accountName, accountType, paymentModeName, paymentModeType
-//       ...(accountName
-//         ? [{ $match: { "accountInfo.accountName": { $regex: accountName, $options: "i" } } }]
-//         : []),
-
-//       ...(accountType
-//         ? [{ $match: { "accountInfo.accountType": accountType } }]
-//         : []),
-
-//       ...(paymentModeName
-//         ? [{ $match: { "paymentTypeInfo.accountName": { $regex: paymentModeName, $options: "i" } } }]
-//         : []),
-
-    
-//       // Sort and compute credit/debit
-//       { $sort: { createdAt: 1 } },
-//       {
-//         $addFields: {
-//           credit: { $cond: [{ $eq: ["$type", "Credit"] }, "$amount", 0] },
-//           debit: { $cond: [{ $eq: ["$type", "Debit"] }, "$amount", 0] },
-//         }
-//       },
-
-//       // Group and calculate totals
-//       {
-//         $group: {
-//           _id: null,
-//           transactions: { $push: "$$ROOT" },
-//           totalCredit: { $sum: "$credit" },
-//           totalDebit: { $sum: "$debit" }
-//         }
-//       },
-
-//       // Running total calculation
-//       {
-//         $addFields: {
-//           transactionsWithRunningTotal: {
-//             $reduce: {
-//               input: "$transactions",
-//               initialValue: {
-//                 runningTotal: 0,
-//                 transactions: []
-//               },
-//               in: {
-//                 runningTotal: {
-//                   $add: [
-//                     "$$value.runningTotal",
-//                     {
-//                       $cond: [
-//                         { $eq: ["$$this.type", "Credit"] },
-//                         "$$this.amount",
-//                         { $multiply: ["$$this.amount", -1] }
-//                       ]
-//                     }
-//                   ]
-//                 },
-//                 transactions: {
-//                   $concatArrays: [
-//                     "$$value.transactions",
-//                     [
-//                       {
-//                         $mergeObjects: [
-//                           "$$this",
-//                           {
-//                             total: {
-//                               $add: [
-//                                 "$$value.runningTotal",
-//                                 {
-//                                   $cond: [
-//                                     { $eq: ["$$this.type", "Credit"] },
-//                                     "$$this.amount",
-//                                     { $multiply: ["$$this.amount", -1] }
-//                                   ]
-//                                 }
-//                               ]
-//                             }
-//                           }
-//                         ]
-//                       }
-//                     ]
-//                   ]
-//                 }
-//               }
-//             }
-//           }
-//         }
-//       },
-
-//       // Slice for pagination
-//       {
-//         $project: {
-//           allData: "$transactionsWithRunningTotal.transactions",
-//           totalCredit: 1,
-//           totalDebit: 1
-//         }
-//       },
-//       {
-//         $addFields: {
-//           data: {
-//             $slice: ["$allData", skip, limit]
-//           },
-//           totalCount: { $size: "$allData" },
-//           totalAmount: {
-//             $add: [
-//               "$totalCredit",
-//               { $multiply: ["$totalDebit", -1] }
-//             ]
-//           }
-//         }
-//       },
-//       {
-//         $project: {
-//           data: 1,
-//           totalCount: 1,
-//           totalCredit: 1,
-//           totalDebit: 1,
-//           totalAmount: 1
-//         }
-//       }
-//     ];
-
-//     const result = await TRANSACTION.aggregate(pipeline);
-
-//     const finalResult = result[0] || {
-//       data: [],
-//       totalCount: 0,
-//       totalCredit: 0,
-//       totalDebit: 0,
-//       totalAmount: 0
-//     };
-
-//     return res.status(200).json({
-//       data: finalResult.data,
-//       totalCount: finalResult.totalCount,
-//       totalCredit: finalResult.totalCredit,
-//       totalDebit: finalResult.totalDebit,
-//       totalAmount: finalResult.totalAmount,
-//       page,
-//       limit
-//     });
-
-//   } catch (err) {
-//     next(err);
-//   }
-// };
-
-
-// Updated Daily Transaction Report API with PDF generation support
 
 
 export const getDailyTransactionReport = async (req, res, next) => {
@@ -648,8 +429,6 @@ export const getDailyTransactionReport = async (req, res, next) => {
       accountType = '',
       paymentModeName = '',
     } = req.query;
-
-    console.log(fromDate ,'to' , toDate)
 
     const limit = parseInt(req.query.limit) || 20;
     const page = parseInt(req.query.page) || 1;
@@ -741,6 +520,18 @@ export const getDailyTransactionReport = async (req, res, next) => {
         }
       },
 
+      // ✅ Exclude payment accounts unless for due payments
+      {
+        $match: {
+          $or: [
+            // allow non-payment accounts
+            { "accountInfo.accountType": { $nin: ["Cash", "Card", "Online", "Credit", "Bank"] } },
+            // allow due payments explicitly (even if Cash/Card/etc.)
+            { referenceType: { $in: ["Due Payment", "Supplier Due Payment"] } }
+          ]
+        }
+      },
+
       ...(accountName
         ? [{ $match: { "accountInfo.accountName": { $regex: accountName, $options: "i" } } }]
         : []),
@@ -813,7 +604,7 @@ export const getDailyTransactionReport = async (req, res, next) => {
                                 }
                               ]
                             },
-                            referenceId: "$$this.referenceId" // ✅ explicit referenceId inclusion
+                            referenceId: "$$this.referenceId"
                           }
                         ]
                       }
@@ -835,16 +626,9 @@ export const getDailyTransactionReport = async (req, res, next) => {
       },
       {
         $addFields: {
-          data: {
-            $slice: ["$allData", skip, limit]
-          },
+          data: { $slice: ["$allData", skip, limit] },
           totalCount: { $size: "$allData" },
-          totalAmount: {
-            $add: [
-              "$totalCredit",
-              { $multiply: ["$totalDebit", -1] }
-            ]
-          }
+          totalAmount: { $add: ["$totalCredit", { $multiply: ["$totalDebit", -1] }] }
         }
       },
       {
@@ -882,6 +666,7 @@ export const getDailyTransactionReport = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 
@@ -966,6 +751,18 @@ export const getDailyTransactionPDF = async (req, res, next) => {
         }
       },
       { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+
+      // ✅ Exclude payment-side accounts unless it's a due payment
+      {
+        $match: {
+          $or: [
+            // allow all non-payment accounts
+            { "accountInfo.accountType": { $nin: ["Cash", "Card", "Online", "Credit", "Bank"] } },
+            // allow Due Payment or Supplier Due Payment even if accountType is Cash/Card/etc.
+            { referenceType: { $in: ["Due Payment", "Supplier Due Payment"] } }
+          ]
+        }
+      },
 
       ...(accountName ? [{ $match: { "accountInfo.accountName": { $regex: accountName, $options: "i" } } }] : []),
       ...(accountType ? [{ $match: { "accountInfo.accountType": accountType } }] : []),
@@ -1081,7 +878,6 @@ export const getDailyTransactionPDF = async (req, res, next) => {
     next(err);
   }
 };
-
 
 
  
@@ -1488,7 +1284,15 @@ export const dailyTransactionExcel = async (req, res, next) => {
             ]
           },
           credit: { $cond: [{ $eq: ["$type", "Credit"] }, "$amount", 0] },
-          debit: { $cond: [{ $eq: ["$type", "Debit"] }, "$amount", 0] },
+          debit: { $cond: [{ $eq: ["$type", "Debit"] }, "$amount", 0] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { referenceType: { $in: ["Supplier Due Payment", "Due Payment"] } },
+            { "accountInfo.accountType": { $nin: ["Cash", "Card", "Online", "Credit", "Bank"] } }
+          ]
         }
       },
       ...(accountName
@@ -1542,9 +1346,8 @@ export const dailyTransactionExcel = async (req, res, next) => {
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
     worksheet.addRow([]);
 
-    // Filters row (only if present)
+    // Filters row
     const filters = [];
-
     if (fromDate) filters.push(`From: ${fromDate}`);
     if (toDate) filters.push(`To: ${toDate}`);
     if (search) filters.push(`Search: ${search}`);
@@ -1560,52 +1363,85 @@ export const dailyTransactionExcel = async (req, res, next) => {
     }
 
     // Header row
-    const headerRow = worksheet.addRow([
-      "Date",
-      "Reference No",
-      "Account Type",
-      "Account Name",
-      "Payment Method",
-      "Vendor/Customer",
-      "Reference Type",
-      "Credit",
-      "Debit",
-      "Total"
-    ]);
-    headerRow.eachCell(cell => {
-      cell.font = { bold: true };
-      cell.alignment = { horizontal: "center" };
-    });
+// Header row
+const headerRow = worksheet.addRow([
+  "S.No",
+  "Date",
+  "Reference No",
+  "Account Type",
+  "Account Name",
+  "Payment Method",
+  "Vendor/Customer",
+  "Reference Type",
+  "Credit",
+  "Debit",
+  "Total"
+]);
+headerRow.eachCell(cell => {
+  cell.font = { bold: true };
+  cell.alignment = { horizontal: "center" };
+});
 
-    // Data rows
-    transactions.forEach(txn => {
-      worksheet.addRow([
-        txn.date,
-        txn.referenceId || "-",
-        txn.accountType || "-",
-        txn.accountName || "-",
-        txn.paymentMethod || "-",
-        txn.vendorCustomer || "-",
-        txn.referenceType || "-",
-        txn.credit || 0,
-        txn.debit || 0,
-        txn.total || 0
-      ]);
-    });
+// Data rows
+let totalCredit = 0;
+let totalDebit = 0;
+let grandTotal = 0;
 
-    // Column widths
-    worksheet.columns = [
-      { width: 12 },
-      { width: 20 },
-      { width: 15 },
-      { width: 25 },
-      { width: 20 },
-      { width: 25 },
-      { width: 20 },
-      { width: 10 },
-      { width: 10 },
-      { width: 12 }
-    ];
+transactions.forEach((txn, index) => {
+  worksheet.addRow([
+    index + 1,
+    txn.date,
+    txn.referenceId || "-",
+    txn.accountType || "-",
+    txn.accountName || "-",
+    txn.paymentMethod || "-",
+    txn.vendorCustomer || "-",
+    txn.referenceType || "-",
+    txn.credit || 0,
+    txn.debit || 0,
+    txn.total || 0
+  ]);
+
+  totalCredit += txn.credit || 0;
+  totalDebit += txn.debit || 0;
+  grandTotal += txn.total || 0;
+});
+
+// Totals row
+worksheet.addRow([]);
+const totalRow = worksheet.addRow([
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "Totals",
+  totalCredit,
+  totalDebit,
+  grandTotal
+]);
+
+totalRow.eachCell(cell => {
+  cell.font = { bold: true };
+  cell.alignment = { horizontal: "center" };
+});
+
+// Column widths
+worksheet.columns = [
+  { width: 8 },   // S.No
+  { width: 12 },  // Date
+  { width: 20 },  // Reference No
+  { width: 15 },  // Account Type
+  { width: 25 },  // Account Name
+  { width: 20 },  // Payment Method
+  { width: 25 },  // Vendor/Customer
+  { width: 20 },  // Reference Type
+  { width: 12 },  // Credit
+  { width: 12 },  // Debit
+  { width: 12 }   // Total
+];
 
     // Send Excel file
     res.setHeader(
@@ -1624,3 +1460,5 @@ export const dailyTransactionExcel = async (req, res, next) => {
     next(err);
   }
 };
+
+

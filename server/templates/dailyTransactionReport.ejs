@@ -61,37 +61,58 @@
     <% } %>
   </div>
 
-  <table>
-    <thead>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Date</th>
+      <th>Reference No</th>
+      <th>Account Type</th>
+      <th>Account Name</th>
+      <th>Payment Mode</th>
+      <th>Vendor / Customer</th>
+      <th>Reference Type</th>  <!-- added here -->
+      <th>Credit (<%= currency %>)</th>
+      <th>Debit (<%= currency %>)</th>
+      <th>Total (<%= currency %>)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% data.forEach((item, index) => { %>
       <tr>
-        <th>#</th>
-        <th>Date</th>
-        <th>Reference No</th>
-        <th>Account Type</th>
-        <th>Account Name</th>
-        <th>Payment Mode</th>
-        <th>Vendor / Customer</th>
-        <th>Credit (<%= currency %>)</th>
-        <th>Debit (<%= currency %>)</th>
-        <th>Total (<%= currency %>)</th>
+        <td class="nowrap"><%= index + 1 %></td>
+        <td class="nowrap"><%= new Date(item.createdAt).toLocaleDateString() %></td>
+        <td class="nowrap"><%= item.referenceId || '-' %></td>
+        <td><%= item.accountType || '-' %></td>
+        <td><%= item.accountName || '-' %></td>
+        <td><%= item.paymentMode || '-' %></td>
+        <td><%= item.vendorCustomer || '-' %></td>
+        <td><%= item.referenceType || '-' %></td>  <!-- added here -->
+        <td class="nowrap"><%= item.type === 'Credit' ? item.amount.toFixed(2) : '0.00' %></td>
+        <td class="nowrap"><%= item.type === 'Debit' ? item.amount.toFixed(2) : '0.00' %></td>
+        <td class="nowrap"><%= (item.total != null) ? item.total.toFixed(2) : '0.00' %></td>
       </tr>
-    </thead>
-    <tbody>
-      <% data.forEach((item, index) => { %>
-        <tr>
-          <td class="nowrap"><%= index + 1 %></td>
-          <td class="nowrap"><%= new Date(item.createdAt).toLocaleDateString() %></td>
-          <td class="nowrap"><%= item.referenceId || '-' %></td>
-          <td><%= item.accountType || '-' %></td>
-          <td><%= item.accountName || '-' %></td>
-          <td><%= item.paymentMode || '-' %></td>
-          <td><%= item.vendorCustomer || '-' %></td>
-          <td class="nowrap"><%= item.type === 'Credit' ? item.amount.toFixed(2) : '0.00' %></td>
-          <td class="nowrap"><%= item.type === 'Debit' ? item.amount.toFixed(2) : '0.00' %></td>
-          <td class="nowrap"><%= item.total?.toFixed(2) || '0.00' %></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+    <% }) %>
+  </tbody>
+</table>
 
-  <br/><br/
+<br/>
+
+<!-- Totals row(s) -->
+<table>
+  <tr>
+    <td><strong>Total Credit:</strong></td>
+    <td><%= (totalCredit || 0).toFixed(2) %> <%= currency %></td>
+  </tr>
+  <tr>
+    <td><strong>Total Debit:</strong></td>
+    <td><%= (totalDebit || 0).toFixed(2) %> <%= currency %></td>
+  </tr>
+  <tr>
+    <td><strong>Net Total:</strong></td>
+    <td><%= (totalAmount || 0).toFixed(2) %> <%= currency %></td>
+  </tr>
+</table>
+
+<br/><br/>
+
