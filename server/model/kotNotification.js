@@ -69,6 +69,7 @@ const kotNotificationSchema = new mongoose.Schema({
 });
 
 kotNotificationSchema.index({ kitchenId: 1, orderId: 1, status: 1 });
+kotNotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
 
 const kotNotificationModel = mongoose.model('KotNotification', kotNotificationSchema);
 export default kotNotificationModel;

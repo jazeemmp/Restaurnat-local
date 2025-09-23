@@ -16,8 +16,6 @@ agenda.define("mark kot as ready", async (job) => {
     kot.preparedAt = new Date();
     await kot.save();
     console.log(`KOT ${kotId} marked as Ready`);
-
-
        const io = getIO();
       io.to(`kitchen:${kot.kitchenId}`).emit('kot_status_ready', kot);
 

@@ -539,8 +539,8 @@ if (shouldSendKOT) {
     }
 
     const [createdKOT] = await KOT_NOTIFICATION.create([kotData]);
-
     req.io?.to(`kitchen:${kitchenId}`).emit('kot_status_update', createdKOT);
+  
 
     const readyAt = new Date(Date.now() + maxPrepTime * 60 * 1000);
     const rejectAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
