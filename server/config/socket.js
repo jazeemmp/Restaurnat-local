@@ -25,10 +25,10 @@ export const initSocketServer = (httpServer) => {
       //  socket.join(`kitchen:${kitchenId}`);
     });
 
-    socket.on("joinKitchen", ({ kitchenId }) => {
-      console.log('kithcen connected',kitchenId)
-      socket.join(`kitchen:${kitchenId}`);
-    });
+        socket.on("joinKitchen", () => {
+          console.log("Kitchen socket joined common room");
+          socket.join("kitchen");
+        });
 
     socket.on("disconnect", () => {
       console.log("Socket disconnected:", socket.id);

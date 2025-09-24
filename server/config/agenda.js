@@ -17,7 +17,7 @@ agenda.define("mark kot as ready", async (job) => {
     await kot.save();
     console.log(`KOT ${kotId} marked as Ready`);
        const io = getIO();
-      io.to(`kitchen:${kot.kitchenId}`).emit('kot_status_ready', kot);
+      io.to(`kitchen`).emit('kot_status_ready', kot);
 
   }
 });
@@ -31,7 +31,7 @@ agenda.define("reject kot after 24 hours", async (job) => {
     console.log(`KOT ${kotId} marked as Rejected (after 24h)`);
 
        const io = getIO();
-      io.to(`kitchen:${kot.kitchenId}`).emit('kot_status_ready', kot);
+      io.to(`kitchen`).emit('kot_status_ready', kot);
     
   }
 });

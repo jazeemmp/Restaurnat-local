@@ -539,7 +539,7 @@ if (shouldSendKOT) {
     }
 
     const [createdKOT] = await KOT_NOTIFICATION.create([kotData]);
-    req.io?.to(`kitchen:${kitchenId}`).emit('kot_status_update', createdKOT);
+    req.io?.to(`kitchen`).emit('kot_status_update', createdKOT);
   
 
     const readyAt = new Date(Date.now() + maxPrepTime * 60 * 1000);
