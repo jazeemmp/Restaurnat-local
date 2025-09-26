@@ -470,7 +470,7 @@ if (shouldSendKOT) {
         status: 'Pending',
         message: 'Combo Order',
         isComboItem: true,
-        comboId: combo._id,
+        comboId: combo._id, 
         comboName: combo.comboName,
         comboItems: comboItemsArray
       });
