@@ -2,10 +2,8 @@ import HID from 'node-hid';
 import CUSTOMER from '../model/customer.js'
 import CALLER_NOTIFICATION from '../model/callerNotification.js'
 import { getIO } from '../config/socket.js'
-import fs from 'fs';
+import config from '../config/callerIdConfig.json' with { type: "json" };
 
-
-const config = JSON.parse(fs.readFileSync('../config/callerIdConfig.json', 'utf-8'));
 
 
 
