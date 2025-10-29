@@ -2,6 +2,10 @@ import HID from 'node-hid';
 import CUSTOMER from '../model/customer.js'
 import CALLER_NOTIFICATION from '../model/callerNotification.js'
 import { getIO } from '../config/socket.js'
+import fs from 'fs';
+
+
+const config = JSON.parse(fs.readFileSync('../config/callerIdConfig.json', 'utf-8'));
 
 
 
@@ -9,15 +13,39 @@ import { getIO } from '../config/socket.js'
 //  Find connected Caller ID device automatically
 function findCallerIdDevice() {
   const devices = HID.devices();
-  return devices.find(
+
+  // 1️ Match vendorId + productId
+  let devInfo = devices.find(
     (d) =>
-      (d.manufacturer && d.manufacturer.toLowerCase().includes("oscar")) ||
-      (d.product && d.product.toLowerCase().includes("caller")) ||
-      (d.product && d.product.toLowerCase().includes("cid"))
+      d.vendorId === config.callerId.vendorId &&
+      d.productId === config.callerId.productId
   );
+
+  // 2️ Fallback: match by keywords (for other models)
+  if (!devInfo) {
+    const keywords = config.callerId.fallbackKeywords.map(k => k.toLowerCase());
+    devInfo = devices.find(
+      (d) =>
+        (d.product && keywords.some(k => d.product.toLowerCase().includes(k))) ||
+        (d.manufacturer && keywords.some(k => d.manufacturer.toLowerCase().includes(k)))
+    );
+  }
+
+  if (devInfo) {
+    console.log(" Caller ID Device Found:", {
+      vendorId: devInfo.vendorId,
+      productId: devInfo.productId,
+      manufacturer: devInfo.manufacturer,
+      product: devInfo.product
+    });
+  } else {
+    console.log("No Caller ID device found!");
+  }
+
+  return devInfo;
 }
 
-// 2️⃣ Start listening for calls
+// 2️ Start listening for calls
 export function startCallerIdListener() {
   const devInfo = findCallerIdDevice();
 
@@ -38,7 +66,7 @@ export function startCallerIdListener() {
 
       const phone = match[1];
       const incoming = phone.replace(/\D/g, "");
-       console.log("📞 Incoming Call:", phone);
+       console.log(" Incoming Call:", phone);
 
       // 3️ Check if customer exists
       let customer = await CUSTOMER.findOne({ normalPhone: incoming });

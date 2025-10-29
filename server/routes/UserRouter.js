@@ -34,6 +34,7 @@ import { assignRiderForOut, completeHomeDelivery, createRider, deleteRider, getD
 import { generateVATReportExcel, generateVATReportPDF, getProfitAndLossReport, getVATReport, profitAndLossExcel, profitandLossPdf, vatSummary } from '../controller/ReportsController/otherReports.js';
 import { getBillSettings, updateBillSettings } from '../controller/Settings/Bill-settings.js';
 import { addPartner, deletePartner, getAvailablePartnerDividends, getDividendSharingReport, getPartnerDividendHistory, getPartners, takePartnerDividend, updatePartner } from '../controller/ReportsController/dividend.js';
+import { getCallerNotifications } from '../controller/Settings/notifiation.js';
 const router = express.Router();
 
 
@@ -377,6 +378,9 @@ router.get('/dividend/history',VerifyToken,checkOfflinePermission("Admin"),getPa
 
 
 //rider report 
-router.get('/reports/rider',VerifyToken,checkOfflinePermission('Admin'),getRiderReport)
+router.get('/reports/rider',VerifyToken,checkOfflinePermission('Admin'),getRiderReport);
+
+//callerId 
+router.get('/call/notification',VerifyToken,getCallerNotifications)
 
 export default router;

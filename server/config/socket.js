@@ -22,6 +22,7 @@ export const initSocketServer = (httpServer) => {
       socket.join(`pos_category-${restaurantId}`);
       socket.join(`posTable-${restaurantId}`);
       socket.join(`posOrder-${restaurantId}`);
+       socket.join(`posCaller`);
       //  socket.join(`kitchen:${kitchenId}`);
     });
 
@@ -30,10 +31,10 @@ export const initSocketServer = (httpServer) => {
           socket.join("kitchen");
         });
 
-        socket.on("joinCallerRoom", () => {
-       console.log("Caller room joined");
-        socket.join("posCaller");
-       });
+      //   socket.on("joinCallerRoom", () => {
+      //  console.log("Caller room joined");
+      //   socket.join("posCaller");
+      //  });
 
 
 
