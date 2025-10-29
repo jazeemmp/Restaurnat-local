@@ -146,6 +146,7 @@ export const createCustomerForPOS = async (req,res,next)=>{
         mobileNo,
         address,
          credit: parseFloat((credit ?? 0).toFixed(2)),
+         normalPhone: mobileNo.replace(/\D/g, ""),
         createdById:user._id,
         createdBy:user.name,
         isSynced:false,
@@ -207,6 +208,7 @@ export const createCustomerForAdmin = async (req,res,next)=>{
         mobileNo,
         address,
          credit: parseFloat((credit ?? 0).toFixed(2)),
+         normalPhone: mobileNo.replace(/\D/g, ""),
         createdById:user._id,
         createdBy:user.name,
         isSynced:false
@@ -490,6 +492,7 @@ export const customerDelete = async (req, res, next) => {
       customer.name = name.trim();
       customer.mobileNo = mobileNo.trim();
       customer.address = address?.trim() || "";
+      customer.normalPhone =  mobileNo.replace(/\D/g, ""),
       customer.credit = credit;
       customer.isSynced = false;
   

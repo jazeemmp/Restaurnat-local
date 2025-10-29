@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import {  attachSocketToRequest } from './middleware/attachSocket.js';
 import { initSocketServer}  from './config/socket.js'
 import { syncAccounts, syncCategory, syncCombo, syncComboGroup, syncCustomer, syncCustomerTypes, syncDividend, syncExpense, syncFloors, syncFood, syncIngredients, syncKitchen, syncMenuType, syncOrders, syncPartner, syncPaymnetRecords, syncPurchase, syncRestaurant, syncRider, syncSupplier, syncTables, syncTransaction, syncUser, synNormalUser } from "./sync/syncWorker.js";
-
+import { startCallerIdListener } from './config/callerIdListner.js'
 
 
 
@@ -75,6 +75,8 @@ app.use((err, req, res, next) => {
 
     const httpServer = http.createServer(app);
     await initSocketServer(httpServer)
+
+    startCallerIdListener();
 
 
     httpServer.listen(port, "0.0.0.0", () => {

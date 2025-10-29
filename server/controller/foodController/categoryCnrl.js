@@ -80,6 +80,7 @@ export const createCategory = async(req,res,next)=>{
     }
 }
 
+
 export const getAllCategories = async (req, res, next) => {
     try {
       
@@ -119,6 +120,7 @@ export const getAllCategories = async (req, res, next) => {
       next(err);
     }
   }
+
 
   export const updateCategory = async (req, res, next) => {
     try {
@@ -241,3 +243,9 @@ export const deleteCategory = async (req, res, next) => {
       next(err);
     }
   };
+
+
+
+
+
+  

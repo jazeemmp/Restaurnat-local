@@ -30,6 +30,14 @@ export const initSocketServer = (httpServer) => {
           socket.join("kitchen");
         });
 
+        socket.on("joinCallerRoom", () => {
+       console.log("Caller room joined");
+        socket.join("posCaller");
+       });
+
+
+
+
     socket.on("disconnect", () => {
       console.log("Socket disconnected:", socket.id);
     });
