@@ -77,7 +77,7 @@ export function startCallerIdListener() {
 
          // Build notification object
       const notificationData = {
-        phone,
+        phone:`+971${phone}`,
         isNewCustomer: !customer,
       };
 

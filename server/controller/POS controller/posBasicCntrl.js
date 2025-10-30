@@ -9,7 +9,8 @@ import { generateUniqueRefId } from '../../controller/POS controller/posOrderCnt
 import ORDER from '../../model/oreder.js';
 import PAYMENT from '../../model/paymentRecord.js'
 import TRANSACTION from '../../model/transaction.js'
-import { generatePDF } from '../../config/pdfGeneration.js'
+import { generatePDF } from '../../config/pdfGeneration.js';
+import CLALER_NOTIFICATION from '../../model/callerNotification.js'
 
 
 
@@ -151,6 +152,16 @@ export const createCustomerForPOS = async (req,res,next)=>{
         createdBy:user.name,
         isSynced:false,
       })
+
+   await CLALER_NOTIFICATION.updateMany(
+  { phone: customer.mobileNo },
+  {
+    $set: {
+       customerId: customer._id,
+       isNewCustomer:false
+    },
+  }
+);
 
         return res.status(200).json({ data: customer })
         
