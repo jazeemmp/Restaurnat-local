@@ -32,6 +32,7 @@ const __dirname = dirname(__filename);
 import agenda from '../../config/agenda.js'
 import POS_SETTINGS from '../../model/posSettings.js'
 import ACCOUNTS from '../../model/account.js'
+import CLALER_NOTIFICATION from '../../model/callerNotification.js'
 
 
 
@@ -262,6 +263,9 @@ export const createOrder = async (req, res, next) => {
     }
 
 
+
+
+
     if(ctypeName.includes('Home Delivery')){
       if(!deliveryDetails.customerId){
          return res.status(400).json({ message: 'Customer are required for delivery' });
@@ -280,6 +284,16 @@ export const createOrder = async (req, res, next) => {
       order.deliveryTime = deliveryDetails.deliveryTime || null
       order.location = deliveryDetails.location;
       order.isSynced= false;
+
+     const customer = await CUSTOMER.findById(deliveryDetails.customerId);
+
+      await CLALER_NOTIFICATION.deleteMany({
+        phone: customer.mobileNo
+      })
+
+      const io= getIO();
+     io.to("posCaller").emit("caller_notification_delete");
+
     }
 
     if (isAdditionalOrder) {

@@ -12,14 +12,14 @@ import config from '../config/callerIdConfig.json' with { type: "json" };
 function findCallerIdDevice() {
   const devices = HID.devices();
 
-  // 1️ Match vendorId + productId
+  // 1 Match vendorId + productId
   let devInfo = devices.find(
     (d) =>
       d.vendorId === config.callerId.vendorId &&
       d.productId === config.callerId.productId
   );
 
-  // 2️ Fallback: match by keywords (for other models)
+  // 2 Fallback: match by keywords (for other models)
   if (!devInfo) {
     const keywords = config.callerId.fallbackKeywords.map(k => k.toLowerCase());
     devInfo = devices.find(
@@ -33,8 +33,6 @@ function findCallerIdDevice() {
     console.log(" Caller ID Device Found:", {
       vendorId: devInfo.vendorId,
       productId: devInfo.productId,
-      manufacturer: devInfo.manufacturer,
-      product: devInfo.product
     });
   } else {
     console.log("No Caller ID device found!");
@@ -43,7 +41,7 @@ function findCallerIdDevice() {
   return devInfo;
 }
 
-// 2️ Start listening for calls
+// 2 Start listening for calls
 export function startCallerIdListener() {
   const devInfo = findCallerIdDevice();
 
@@ -52,50 +50,94 @@ export function startCallerIdListener() {
     return;
   }
 
-  console.log("Caller ID Device Found:", devInfo);
 
   const device = new HID.HID(devInfo.path);
+  
 
-  device.on("data", async (data) => {
-    try {
-      const ascii = data.toString("ascii").replace(/\0/g, "");
-      const match = ascii.match(/(\+?\d{7,15})/);
-      if (!match) return;
+let dataBuffer = '';
+let lastProcessedNumber = '';
+let lastProcessedTime = 0;
 
-      const phone = match[1];
-      const incoming = phone.replace(/\D/g, "");
-       console.log(" Incoming Call:", phone);
-
-      // 3️ Check if customer exists
-      let customer = await CUSTOMER.findOne({ normalPhone: incoming });
-
-         if (!customer) {
-        customer = await CUSTOMER.findOne({
-          normalPhone: new RegExp(incoming.slice(-8) + "$"),
-        });
+device.on("data", async (data) => {
+  try {
+    const ascii = data.toString("ascii");
+    dataBuffer += ascii;
+    
+    // Log raw data for debugging
+    // console.log("Raw HID Data:", JSON.stringify(ascii));
+    
+    // Look for complete number patterns in the accumulated buffer
+    const numberMatch = dataBuffer.match(/(\d{10,15})/);
+    
+    if (numberMatch) {
+      const rawNumber = numberMatch[1];
+      const cleanNumber = rawNumber.replace(/\D/g, '');
+      
+      // Validate number length and check for duplicates
+      const now = Date.now();
+      if (cleanNumber.length >= 10 && cleanNumber.length <= 15) {
+        // Debouncing: ignore same number within 5 seconds
+        if (cleanNumber !== lastProcessedNumber || (now - lastProcessedTime) > 5000) {
+          // console.log("Complete Number Found:", cleanNumber);
+          // console.log("Full Buffer:", JSON.stringify(dataBuffer));
+          
+          lastProcessedNumber = cleanNumber;
+          lastProcessedTime = now;
+          
+          // Process the call
+          await processIncomingCall(cleanNumber);
+        } else {
+          console.log("Ignoring duplicate number:", cleanNumber);
+        }
       }
-
-         // Build notification object
-      const notificationData = {
-        phone:`+971${phone}`,
-        isNewCustomer: !customer,
-      };
-
-      if (customer) {
-        notificationData.customerId = customer._id;
-      }
-
-      const notification = await CALLER_NOTIFICATION.create(notificationData);
-
-      // 4️ Emit socket event
-        const io = getIO();
-      io.to("posCaller").emit("caller_notification", notification);
-
-      console.log(" Notification saved & emitted:", notificationData);
-    } catch (error) {
-      console.error("Caller ID Error:", error);
+      
+      // Clear the buffer after successful extraction
+      dataBuffer = '';
     }
-  });
+    
+    // Prevent buffer from growing too large
+    if (dataBuffer.length > 100) {
+      console.log("Buffer overflow, resetting");
+      dataBuffer = '';
+    }
+    
+  } catch (error) {
+    console.error("Caller ID Error:", error);
+    dataBuffer = ''; // Reset on error
+  }
+});
+
+// Separate function to process the call
+async function processIncomingCall(incoming) {
+  try {
+    console.log("Processing Call:", incoming);
+    
+    let customer = await CUSTOMER.findOne({ normalPhone: incoming });
+    if (!customer) {
+      customer = await CUSTOMER.findOne({ 
+        normalPhone: new RegExp(incoming.slice(-8) + "$") 
+      });
+    }
+    
+    const notificationData = {
+      phone: `+971${incoming}`,
+      isNewCustomer: !customer,
+    };
+    
+    if (customer) {
+      notificationData.customerId = customer._id;
+    }
+    
+    const notification = await CALLER_NOTIFICATION.create(notificationData);
+    const io = getIO();
+    io.to("posCaller").emit("caller_notification", notification);
+    
+    console.log("Notification saved & emitted:");
+    
+  } catch (error) {
+    console.error("Caller Processing Error:", error);
+  }
+}
 
   device.on("error", (err) => {
     console.error("HID Error:", err);
