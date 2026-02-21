@@ -7,11 +7,18 @@ import CATEGORY from '../../model/category.js'
 import CHOICE from "../../model/choice.js";
 import FOOD from '../../model/food.js'
 import { getIO  } from "../../config/socket.js";
+import ORDER from '../../model/oreder.js';
+import COMBOGROUP from '../../model/comboGroup.js'
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
 
 
 
 export const createFood = async (req, res, next) => {
   try {
+
+    
 
     let {
       foodName,
@@ -28,11 +35,38 @@ export const createFood = async (req, res, next) => {
       addOnsIds,
       choices,
       offer,
+      preparationTime,
 
     } = req.body;
 
-    const foodImg = req.file ? `/uploads/${req.file.filename}` : null;
+    
 
+    // 1. Compress if needed
+        if (req.file) {
+        const originalPath = req.file.path;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+          const resizedPath = originalPath.replace(ext, '-compressed.webp');
+
+          await sharp(originalPath)
+            .resize({ width: 600, withoutEnlargement: true })
+            .webp({ quality: 70 })
+            .toFile(resizedPath);
+
+          try {
+            await fs.promises.unlink(originalPath);  // safer async delete
+          } catch (err) {
+            console.warn("File busy, couldn't delete:", err.message);
+          }
+
+        // Update file refernce for further processing
+        req.file.path = resizedPath;
+        req.file.filename = path.basename(resizedPath);
+      }
+
+
+
+      // Now define it AFTER compression is done
+    const foodImg = req.file ? `/uploads/${req.file.filename}` : null
   
     if (typeof menuTypeIds === "string") {
       menuTypeIds = JSON.parse(menuTypeIds); // Parse string into array if necessary
@@ -109,15 +143,14 @@ export const createFood = async (req, res, next) => {
     // Validate portions
     if (Array.isArray(portions)) {
       for (const p of portions) {
-        if (!p.name ||
-          !p.conversion) {
+        if (!p.name) {
           return res
             .status(400)
-            .json({ message: "Each portion must include a name,price and conversion" });
+            .json({ message: "Each portion must include a name,price" });
         }
-        if (!Array.isArray(p.prices) || p.prices.length === 0) {
-          return res.status(400).json({ message: "Each portion must have prices." });
-        }
+        // if (!Array.isArray(p.prices) || p.prices.length === 0) {
+        //   return res.status(400).json({ message: "Each portion must have prices." });
+        // }
       }
     }
 
@@ -191,7 +224,8 @@ export const createFood = async (req, res, next) => {
             name: choiceName,
             restaurantId,
             createdById: user._id,
-            createdBy: `${user.name}`,
+            createdBy:user.name,
+           
           });
          
           choiceIds.push(newChoice._id);
@@ -218,8 +252,11 @@ export const createFood = async (req, res, next) => {
       choices: choiceIds,
       offer: offer ? offer : null,
       special: special ? special : false,
+      preparationTime: preparationTime || null,
       createdById: user._id,
-      createdBy: `${user.name}`,
+      createdBy:user.name,
+      isSynced:false,
+      
     });
 
     const io = getIO();
@@ -311,6 +348,7 @@ export const updateFood = async (req, res, next) => {
       special,
       addOnsIds,
       choices,
+      preparationTime,
       offer,
     } = req.body;
 
@@ -322,6 +360,7 @@ export const updateFood = async (req, res, next) => {
     if (!user) {
       return res.status(400).json({ message: "User not found!" });
     }
+
 
     if (!restaurantId) {
       return res.status(400).json({ message: "restaurant id is required!" });
@@ -361,6 +400,9 @@ export const updateFood = async (req, res, next) => {
         .status(400)
         .json({ message: "Food with this name already exists!" });
     }
+
+
+    
 
   
 
@@ -424,31 +466,72 @@ export const updateFood = async (req, res, next) => {
             name: choiceName,
             restaurantId,
             createdById: user._id,
-            createdBy: `${user.name}`,
+            createdBy:user.name,
+           
           });
           choiceIds.push(newChoice._id);
         }
       }
     }
 
-      const foodImg = req.file ? `/uploads/${req.file.filename}` : food.image;
+
+        // 1. Compress if needed
+      if (req.file) {
+  const originalPath = req.file.path;
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const resizedPath = originalPath.replace(ext, '-compressed.webp');
+
+  await sharp(originalPath)
+    .resize({ width: 600, withoutEnlargement: true })
+    .webp({ quality: 70 })
+    .toFile(resizedPath);
+
+    await new Promise(res => setTimeout(res, 100));
+
+  try {
+    await fs.promises.unlink(originalPath);  // safer async delete
+  } catch (err) {
+    console.warn("File busy, couldn't delete:", err.message);
+  }
+
+  req.file.path = resizedPath;
+  req.file.filename = path.basename(resizedPath);
+
+      if (food.image && food.image.startsWith("/uploads/")) {
+      const oldImagePath = path.join(process.cwd(), food.image); 
+      try {
+        if (await fs.promises.stat(oldImagePath)) {
+          await fs.promises.unlink(oldImagePath)
+        }
+      } catch (err) {
+        console.warn("Old image not found, skip delete:", err.message);
+      }
+    }
+}
+      // Now define it AFTER compression is done
+    const foodImg = req.file 
+  ? `/uploads/${req.file.filename}` 
+  : food.image; 
+
+    
 
     food.foodName = foodName;
     food.restaurantId = restaurantId;
     food.categoryId = categoryId;
     food.foodType = foodType;
     food.menuTypeIds = menuTypeIds;
-      food.image = foodImg
     food.image = foodImg;
     food.courseIds = courseIds;
     food.prices = portions && portions.length > 0 ? null : prices;
-    food.basePrice = portions && portions.length > 0 ? null : basePrice,
+    food.basePrice = portions && portions.length > 0 ? null : basePrice;
     food.portions = portions || [];
     food.kitchenId = kitchenId || null;
     food.special = special || false;
     food.addOnsIds = addOnsIds;
+    food.preparationTime = preparationTime;
     food.choices = choiceIds;
-    (food.offer = offer ? offer : null), 
+    food.isSynced = false;
+    (food.offer = offer ? offer : null);
 
     await food.save();
 
@@ -463,6 +546,8 @@ export const updateFood = async (req, res, next) => {
     next(err);
   }
 };
+
+
 
 export const getOneFood = async (req, res, next) => {
   try {
@@ -522,6 +607,25 @@ export const deleteFood = async (req, res, next) => {
     const food = await FOOD.findById(foodId);
     if (!food) {
       return res.status(404).json({ message: "Food not found!" });
+    }
+
+    
+    //  Check: foodId used in direct order items
+     const usedInOrders = await ORDER.exists({ "items.foodId": foodId });
+    if (usedInOrders) {
+      return res.status(400).json({ message: "Cannot delete this food item. It is used in orders." });
+    }
+
+       //  Check: foodId used in nested combo items inside order
+    const usedInNestedOrderCombos = await ORDER.exists({ "items.items.foodId": foodId });
+    if (usedInNestedOrderCombos) {
+      return res.status(400).json({ message: "Cannot delete this food item. It is used in combo items in orders." });
+    }
+
+       //  Check: foodId used in combo groups
+    const usedInComboGroups = await COMBOGROUP.exists({ "foodItems.foodId": foodId });
+    if (usedInComboGroups) {
+      return res.status(400).json({ message: "Cannot delete this food item. It is used in combos." });
     }
 
     await FOOD.findByIdAndDelete(foodId)

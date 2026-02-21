@@ -1,31 +1,53 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
-      restaurantId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Restaurant',
-            default:null,
-        },
-    name: { type: String, },
-    email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-        createdById: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'User',
-               
-          },
-    role: { 
-        type: String, 
-        enum: ["User","CompanyAdmin"], 
-
+const userSchema = new mongoose.Schema(
+  {
+    restaurantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Restaurant",
+      default: null,
     },
-    createdBy : { type:String},
+    name: {
+      type: String,
+      default: "User",
+    },
+    phone:{
+      type:String,
+      
+    },
+    pin: {
+      type: String, // hashed version will be stored
+    },
+    accessName:{
+      type:String,
+    },
+
+    createdById: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    createdBy: {
+      type: String,
+    },
+    role: {
+      type: String,
+      enum: ["User", "CompanyAdmin"],
+    },
+
+    access: {
+      type: [String],
+      enum: ["Admin", "Reports","Purchase", "Sale", "Menu Setup"],
+      default: [],
+    },
+
     status: { type: Boolean, default: true },
+          isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+  },
+  { timestamps: true }
+);
 
-}, { timestamps: true });
-
-userSchema.index({ email: 1, restaurantId: 1 });
+userSchema.index({ restaurantId: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;
-

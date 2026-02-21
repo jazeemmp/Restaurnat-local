@@ -77,7 +77,7 @@ const foodSchema =new mongoose.Schema({
     portions: [
         {
           name: { type: String,},
-          conversion: {type:Number},
+          conversion: {type:Number, default:1},
           base:{ type:Boolean, default:false},
           basePrice:{
             type:Number,
@@ -112,14 +112,22 @@ const foodSchema =new mongoose.Schema({
         endDate: Date,
         discount: Number
       },
+      preparationTime:{
+        type:Number,
+        default:null,
+      },
     createdById: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true, // CompanyAdmin or BranchAdmin who created it
     },
-    createdBy:{
-        type:String,
-    },
+      createdBy: {
+          type:String,
+      },
+
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+  
 },{
     timestamps:true
 })

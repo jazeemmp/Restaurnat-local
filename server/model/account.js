@@ -4,7 +4,6 @@ const accountSchema = new mongoose.Schema({
   restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Restaurant',
-    required: true
   },
   accountName: {
     type: String,
@@ -24,6 +23,7 @@ accountType: {
     "Cash",
     "Bank",
     "Card",
+    "Due",
     "Online",
     "Fixed Asset",
     "Stock",
@@ -33,6 +33,7 @@ accountType: {
     "Equity",
     "Income",
     "Other Income",
+    "Purchase",
     "Expense",
     "Cost of Goods Sold",
     "Other Expenses",
@@ -57,9 +58,12 @@ accountType: {
           ref: 'User',
           required: true, // CompanyAdmin or BranchAdmin who created it
       },
-      createdBy:{
+       createdBy: {
           type:String,
       },
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+    
 },{
     timestamps:true
 });

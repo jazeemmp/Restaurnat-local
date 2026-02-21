@@ -2,7 +2,12 @@ import USER from '../../model/userModel.js';
 import RESTAURANT from '../../model/restaurant.js'
 import validatePhoneNumbers from '../../middleware/phoneValidator.js';
 import CUSTOMER_TYPE from '../../model/customerTypes.js'
-
+import mongoose from 'mongoose';
+import ORDER from '../../model/oreder.js'
+import FOOD from '../../model/food.js'
+import fs from 'fs';
+import path from 'path';
+import sharp  from 'sharp';
 
 
 const generateUniqueRestaurantId = async () => {
@@ -21,16 +26,43 @@ const generateUniqueRestaurantId = async () => {
 
 export const  createRestuarantBranch = async (req,res,next)=>{
     try{
-       console.log(req.body,'--dfid')
+
         const {
             name, address,country, state, city, email,phone,phone2,phone3,
-            openingTime, closingTime, vatPercentage, currency, currencySymbol,
+            openingTime, closingTime, vatPercentage, currency, currencySymbol,trn,
         } = req.body;
 
-          const logo = req.file ? `/uploads/${req.file.filename}` : null;
 
-      
+            if (!req.file) {
+      return res.status(400).json({ message: "Logo image is required!" });
+    }
+        const originalPath = req.file.path;
 
+        const dir = path.dirname(originalPath);
+        const baseName = path.basename(originalPath, path.extname(originalPath)); // removes extension
+        const timestamp = Date.now();
+        const outputFileName = `${baseName}-${timestamp}.png`;
+        const pngPath = path.join(dir, outputFileName); // full path to save new image
+
+
+
+            // Convert to PNG using sharp
+                    await sharp(originalPath)
+                .resize({ width: 600, withoutEnlargement: true })
+                .png()
+                .toFile(pngPath);
+
+                // Wait briefly to ensure file is fully released
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                fs.unlink(originalPath, (err) => {
+                if (err) {
+                    console.error('Failed to delete original file:', err.message);
+                }
+                });
+            const logo = `/uploads/${path.basename(pngPath)}`;
+
+    
   
         // Validate required fields
         if (!name) return res.status(400).json({ message: 'Restaurant name is required!' });
@@ -95,6 +127,8 @@ export const  createRestuarantBranch = async (req,res,next)=>{
             currencySymbol,
             companyAdmin: companyAdminId,
             logo,
+            trn,
+            isSynced:false,
         });
         return res.status(201).json({ message: "Restaurant created successfully", restaurant });
 
@@ -147,11 +181,36 @@ export const updateRestaurantBranch = async (req, res, next) => {
         const {
             restaurantId,
             name, address,country, state, city, email,phone,phone2,phone3,
-            openingTime, closingTime, vatPercentage, currency, currencySymbol,
+            openingTime, closingTime, vatPercentage, currency, currencySymbol,trn
         } = req.body;
 
-        const logo = req.file ? `/uploads/${req.file.filename}` : null;
+             let logo = null; // default to null (no change)
 
+        if (req.file) {
+            const originalPath = req.file.path;
+            const dir = path.dirname(originalPath);
+            const baseName = path.basename(originalPath, path.extname(originalPath));
+            const timestamp = Date.now();
+            const outputFileName = `${baseName}-${timestamp}.png`;
+            const pngPath = path.join(dir, outputFileName);
+
+            // Convert to PNG using sharp
+            await sharp(originalPath)
+                .resize({ width: 600, withoutEnlargement: true })
+                .png()
+                .toFile(pngPath);
+
+            // Wait briefly to ensure file is fully released
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            fs.unlink(originalPath, (err) => {
+                if (err) {
+                    console.error('Failed to delete original file:', err.message);
+                }
+            });
+
+            logo = `/uploads/${path.basename(pngPath)}`;
+        }
 
 
         const userId = req.user;
@@ -214,6 +273,8 @@ export const updateRestaurantBranch = async (req, res, next) => {
                 vatPercentage: vatPercentage || restaurant.vatPercentage,
                 currency: currency || restaurant.currency,
                 currencySymbol: currencySymbol || restaurant.currencySymbol,
+                trn: trn || restaurant.trn,
+                isSynced: false
             },
             { new: true } //  Return updated document
         );
@@ -253,10 +314,6 @@ export const deleteRestaurant = async (req,res,next)=>{
     }
 
 }
-
-
-
-
 
 
 export const addCustomerType = async (req, res, next) => {
@@ -328,7 +385,8 @@ export const addCustomerType = async (req, res, next) => {
                     await CUSTOMER_TYPE.create({
                         restaurantId: restaurant._id,
                         type: custType.type,
-                        subMethods: custType.subMethods
+                        subMethods: custType.subMethods,
+                        isSynced:false
                     });
                 }
             } else {
@@ -347,7 +405,8 @@ export const addCustomerType = async (req, res, next) => {
                 await CUSTOMER_TYPE.create({
                     restaurantId: restaurant._id,
                     type: custType.type,
-                    subMethods: custType.subMethods || []
+                    subMethods: custType.subMethods || [],
+                    isSynced:false
                 });
             }
         }
@@ -366,14 +425,15 @@ export const addCustomerType = async (req, res, next) => {
   export const updateCustomerTypes = async (req, res, next) => {
     try {
       const { restaurantId, customerTypeId, type, subMethods } = req.body;
+      console.log(req.body,'boady')
       const userId = req.user;
 
       // Validate input
-      if (!restaurantId || !mongoose.Types.ObjectId.isValid(restaurantId)) {
+      if (!restaurantId) {
           return res.status(400).json({ message: "Valid restaurantId is required!" });
       }
 
-      if (!customerTypeId || !mongoose.Types.ObjectId.isValid(customerTypeId)) {
+      if (!customerTypeId ) {
           return res.status(400).json({ message: "Valid customerTypeId is required!" });
       }
 
@@ -422,6 +482,7 @@ export const addCustomerType = async (req, res, next) => {
           // Update the document
           existingCustomerType.type = type;
           existingCustomerType.subMethods = subMethods;
+          existingCustomerType.isSynced = false;
           await existingCustomerType.save();
 
           return res.status(200).json({ 
@@ -445,6 +506,7 @@ export const addCustomerType = async (req, res, next) => {
           // Update the document
           existingCustomerType.type = type;
           existingCustomerType.subMethods = subMethods || [];
+          existingCustomerType.isSynced = false;
           await existingCustomerType.save();
 
           return res.status(200).json({ 
@@ -464,8 +526,10 @@ export const addCustomerType = async (req, res, next) => {
     try {
       const { customerTypeId, subMethod } = req.body;
 
+      console.log(customerTypeId,subMethod,'___payment mehtod')
+
       // Validate input
-      if (!customerTypeId || !mongoose.Types.ObjectId.isValid(customerTypeId)) {
+      if (!customerTypeId) {
           return res.status(400).json({ success: false, message: "Valid customerTypeId is required" });
       }
 
@@ -475,30 +539,62 @@ export const addCustomerType = async (req, res, next) => {
           return res.status(404).json({ success: false, message: "Customer type not found" });
       }
 
-      // Handle Online type with subMethod deletion
-      if (customerType.type === "Online" && subMethod) {
-          // Check if subMethod exists
-          const subMethodIndex = customerType.subMethods.indexOf(subMethod);
-          if (subMethodIndex === -1) {
-              return res.status(400).json({ 
-                  success: false, 
-                  message: "SubMethod not found in this Online type" 
-              });
-          }
+          // 1. Check in Food.prices
+    const foodPriceUsed = await FOOD.exists({ 
+      "prices.customerTypeId": customerTypeId 
+    });
 
-          // Remove the subMethod
-          customerType.subMethods.splice(subMethodIndex, 1);
+     if (foodPriceUsed) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete: Customer type is used in Food prices. Please remove related food entries first."
+      });
+    }
 
-          // If no subMethods left, delete the entire entry
-          if (customerType.subMethods.length === 0) {
-              await CUSTOMER_TYPE.findByIdAndDelete(customerTypeId);
-              return res.status(200).json({ 
-                  success: true, 
-                  message: "Online type deleted as no subMethods remain" 
-              });
-          }
+        // 2. Check in Food.portions.prices
+    const portionPriceUsed = await FOOD.exists({ 
+      "portions.prices.customerTypeId": customerTypeId 
+    });
 
-          // Save if subMethods still exist
+    if (portionPriceUsed) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete: Customer type is used in Food portion prices. Please remove related entries first."
+      });
+    }
+
+        // 3. Check in Order.customerTypeId
+    const orderUsed = await ORDER.exists({ customerTypeId });
+    if (orderUsed) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete: Customer type is used in Orders. Please remove related orders first."
+      });
+    }
+
+// If type is "Online" and subMethod is provided
+    if (customerType.type === "Online" && subMethod) {
+      const index = customerType.subMethods.indexOf(subMethod);
+      if (index === -1) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "SubMethod not found in this Online type" 
+        });
+      }
+
+      // Remove subMethod
+      customerType.subMethods.splice(index, 1);
+
+             // If no subMethods left, delete whole document
+      if (customerType.subMethods.length === 0) {
+        await CUSTOMER_TYPE.findByIdAndDelete(customerTypeId);
+        return res.status(200).json({ 
+          success: true, 
+          message: "Online type deleted as no subMethods remain" 
+        });
+      }
+
+         // Save if subMethods still exist
           await customerType.save();
           return res.status(200).json({ 
               success: true, 
@@ -518,6 +614,7 @@ export const addCustomerType = async (req, res, next) => {
       return res.status(500).json({ message: "Server error", error: err.message });
     }
   };
+
 
     export const getAllCustomerTypes = async (req, res, next) => {
     try {
@@ -547,3 +644,5 @@ export const addCustomerType = async (req, res, next) => {
         next(err);
     }
 };
+
+

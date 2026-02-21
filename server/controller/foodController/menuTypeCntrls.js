@@ -3,6 +3,7 @@ import USER from '../../model/userModel.js';
 import RESTAURANT from '../../model/restaurant.js'
 import COURSE from '../../model/course.js'
 import { getIO  } from "../../config/socket.js";
+import FOOD from '../../model/food.js'
 
 
 export const CreateMenuType = async(req,res,next)=>{
@@ -75,7 +76,9 @@ export const CreateMenuType = async(req,res,next)=>{
                    name:menu.name,
                    restaurantId :restaurant._id,
                    createdById : user._id,
-                   createdBy: user.name,
+                   createdBy:user.name,
+                   isSynced:false
+                
                })
             }
           const io = getIO();
@@ -205,6 +208,7 @@ export const updateMenuTypes = async (req,res,next)=>{
         }
 
         menuType.name = name.trim();
+        menuType.isSynced = false;
          await menuType.save();
 
 
@@ -265,8 +269,16 @@ export const deleteMenuTypes = async (req,res,next)=>{
          // Verify if the department exists in the restaurant
          const menType = await MENUTYPE.findOne({ _id: menuTypeId, restaurantId });
          if (!menType) {
-             return res.status(404).json({ message: "Menuu type not found!" });
+             return res.status(404).json({ message: "Menu type not found!" });
          }
+
+                 const menuInUse = await FOOD.exists({ menuTypeIds :menuTypeId });
+             if (menuInUse) {
+               return res.status(400).json({
+                 message:
+                   "Cannot delete this menu type because it is being used in food items.",
+               });
+             }
 
             await MENUTYPE.findByIdAndDelete(menuTypeId)
             const io = getIO();
@@ -357,7 +369,7 @@ export const deleteMenuTypes = async (req,res,next)=>{
 //                     name:cour.name,
 //                     restaurantId :restaurant._id,
 //                     createdById : user._id,
-//                     createdBy: user.name,
+//                  
 //                 })
 //              }
 //              const io = getIO();

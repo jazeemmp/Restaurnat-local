@@ -15,6 +15,10 @@ const customerSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  normalPhone:{
+    type:String,
+    default:null
+  },
   address: {
     type: String,
     trim: true,
@@ -24,14 +28,21 @@ const customerSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  totalSpend: {
+  type: Number,
+  default: 0
+},
     createdById: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
          // CompanyAdmin or BranchAdmin who created it
     },
-    createdBy:{
-        type:String,
-    },
+      createdBy: {
+          type:String,
+      },
+     isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+   
 }, { timestamps: true });
 
 customerSchema.index({ restaurantId: 1, mobileNo: 1 });

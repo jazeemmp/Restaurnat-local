@@ -5,6 +5,8 @@ import FLOORS from '../../model/floor.js'
 import TABLE from '../../model/tables.js'
 import KITCHEN from '../../model/kitchen.js'
 import mongoose from 'mongoose';
+import FOOD from '../../model/food.js'
+import ORDER from '../../model/oreder.js'
 
 
 
@@ -70,7 +72,9 @@ export const createFloors = async (req,res,next)=>{
             name: floor.name.trim(),
             restaurantId,
             createdById: user._id,
-            createdBy: user.name,
+            createdBy:user.name,
+            isSynced:false,
+           
         }));
 
 
@@ -202,8 +206,8 @@ export const updateFloorName = async (req,res,next)=>{
 
         const updatedFloor = await FLOORS.findByIdAndUpdate(
             floorId,
-            { name: name.trim() },
-            { new: true } // Return the updated document
+            { name: name.trim(),isSynced:false },
+            { new: true } 
         );
 
 
@@ -232,6 +236,13 @@ export const deleteFloor = async (req,res,next)=>{
        if(!floor){
         return res.status(400).json({ message: "Floor not found!" });
        }
+
+   const isFloorUsed = await TABLE.exists({ floorId });
+    if (isFloorUsed) {
+      return res.status(400).json({
+        message: "Cannot delete this floor because it is being used in tables.",
+      });
+    }
 
        await FLOORS.findByIdAndDelete(floorId)
 
@@ -298,6 +309,7 @@ export const createTables = async (req,res,next)=>{
             restaurantId, 
             floorId,    
             name: name.trim(),
+
         });
         
         if (existingTable) {
@@ -312,7 +324,10 @@ export const createTables = async (req,res,next)=>{
             restaurantId,
             floorId,
             createdById:user._id,
-            createdBy: user.name,
+            createdBy:user.name,
+            isSynced:false,
+         
+          
         });
 
         return res.status(200).json({ message:'Table added succsfully',table})
@@ -432,6 +447,7 @@ export const updateTable = async (req,res,next)=>{
                     floorId: floorId ? floorId : table.floorId,
                     updatedById: user._id,
                     updatedBy: user.name,
+                    isSynced:false
                 },
             },
             { new: true } // Return the updated document
@@ -464,6 +480,14 @@ export const deleteTable = async (req,res,next)=>{
         if (!table) {
             return res.status(404).json({ message: "Table not found!" });
         }
+
+           const tableUsed = await ORDER.exists({ tableId });
+    if (tableUsed) {
+      return res.status(400).json({
+        message:
+          "Cannot delete this table because it is being used in orders.",
+      });
+    }
 
         await TABLE.findByIdAndDelete(tableId)
 
@@ -518,6 +542,14 @@ export const addKitchen = async(req,res,next)=>{
             return res.status(404).json({ message: "No matching restaurants found!" });
         }
 
+    //        const existingKitchen = await KITCHEN.findOne({ restaurantId });
+    // if (existingKitchen) {
+    //   return res.status(400).json({
+    //     message: `Restaurant already has a kitchen ('${existingKitchen.name}'). Only one kitchen is allowed!`,
+    //   });
+    // }
+
+
 
         for (const kitchen of kitchens) {
             const existKtichen = await KITCHEN.findOne({
@@ -536,7 +568,9 @@ export const addKitchen = async(req,res,next)=>{
             name: kitchen.name.trim(),
             restaurantId,
             createdById: user._id,
-            createdBy: user.name,
+            createdBy:user.name,
+            isSynced:false
+           
         }));
 
 
@@ -633,11 +667,9 @@ export const updateKitchen = async (req, res, next) => {
             });
           }
 
-
-
         const updatedKitchen = await KITCHEN.findByIdAndUpdate(
             kitchenId,
-            { name: name.trim() },
+            { name: name.trim() ,isSynced:false },
             { new: true } // Return the updated document
         );
 
@@ -667,6 +699,16 @@ export const deleteKitchen = async (req,res,next)=>{
         if (!kitchen) {
             return res.status(404).json({ message: "Kithen not found!" });
         }
+
+        const kitchenUse = await FOOD.exists({ kitchenId });
+        if(kitchenUse){
+                return res.status(400).json({
+        message:
+          "Cannot delete this kitchen because it is being used in food items.",
+      });
+        }
+
+
 
         await KITCHEN.findByIdAndDelete(kitchenId)
 

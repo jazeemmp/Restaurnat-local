@@ -34,6 +34,9 @@ const tableSchema  =new mongoose.Schema({
         ref: 'User',
         required: true, // CompanyAdmin or BranchAdmin who created it
     },
+      createdBy: {
+          type:String,
+      },
     currentOrderId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order', 
@@ -43,16 +46,16 @@ const tableSchema  =new mongoose.Schema({
         type: Number,
         default:null
       },
-    createdBy:{
-        type:String,
-    },
+  
     status:{
          type:Boolean,default:true
     },
         isDeleted: { type: Boolean, default: false },
             deletedAt: { type: Date, default: null },
             deletedById: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,default:null },
-            deletedBy: { type: String, default: null }
+            deletedBy: { type: String, default: null },
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
 },{
     timestamps:true
 })

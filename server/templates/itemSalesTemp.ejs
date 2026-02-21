@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Item-wise Sales Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      margin: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .filters {
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .nowrap {
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h2>Item-wise Sales Report</h2>
+
+  <div class="filters">
+    <% if (filters?.search) { %>
+      <strong>Search:</strong> <%= filters.search %><br />
+    <% } %>
+    <% if (filters?.minPrice !== undefined) { %>
+      <strong>Min Price:</strong> <%= filters.minPrice %><br />
+    <% } %>
+    <% if (filters?.maxPrice !== undefined) { %>
+      <strong>Max Price:</strong> <%= filters.maxPrice %><br />
+    <% } %>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th class="nowrap">Item Name</th>
+        <th class="nowrap">Category</th>
+        <th class="nowrap">Total Orders</th>
+        <th class="nowrap">Total Quantity</th>
+        <th class="nowrap">Total Sales (<%= currency %>)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (data.length === 0) { %>
+        <tr>
+          <td colspan="5" style="text-align: center;">No data available for selected filters.</td>
+        </tr>
+      <% } else { %>
+        <% data.forEach((item,index) => { %>
+          <tr>
+              <td><%= index + 1 %></td>
+            <td><%= item.itemName %></td>
+            <td><%= item.category %></td>
+            <td><%= item.totalOrders %></td>
+            <td><%= item.totalQty %></td>
+            <td><%= item.totalSales.toFixed(2) %></td>
+          </tr>
+        <% }) %>
+      <% } %>
+    </tbody>
+      <% if (data.length > 0) { %>
+  <tfoot>
+    <tr>
+      <td colspan="5" style="text-align: right; font-weight: bold;">Total:</td>
+      <td style="font-weight: bold;"><%= totalAmount %></td>
+    </tr>
+  </tfoot>
+  <% } %>
+  </table>
+</body>
+</html>

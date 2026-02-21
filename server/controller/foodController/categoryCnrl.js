@@ -2,6 +2,7 @@ import CATEGORY from '../../model/category.js'
 import USER from '../../model/userModel.js';
 import RESTAURANT from '../../model/restaurant.js'
 import { getIO  } from "../../config/socket.js";
+import FOOD from '../../model/food.js'
 
 
 
@@ -56,7 +57,9 @@ export const createCategory = async(req,res,next)=>{
                     name,
                     restaurantId: restaurant._id,
                     createdById: user._id,
-                    createdBy:user.name
+                    createdBy:user.name,
+                    isSynced:false,
+                   
                 })
     
               const saved = await category.save();
@@ -76,6 +79,7 @@ export const createCategory = async(req,res,next)=>{
         next(err)
     }
 }
+
 
 export const getAllCategories = async (req, res, next) => {
     try {
@@ -116,6 +120,7 @@ export const getAllCategories = async (req, res, next) => {
       next(err);
     }
   }
+
 
   export const updateCategory = async (req, res, next) => {
     try {
@@ -175,6 +180,7 @@ export const getAllCategories = async (req, res, next) => {
         }
 
         category.name = name;
+        category.isSynced = false;
 
         const updatedCategory = await category.save();
 
@@ -214,6 +220,14 @@ export const deleteCategory = async (req, res, next) => {
         return res.status(404).json({ message: "Category not found!" });
       }
 
+          const categoryInUse = await FOOD.exists({ categoryId });
+    if (categoryInUse) {
+      return res.status(400).json({
+        message:
+          "Cannot delete this category because it is being used in food items.",
+      });
+    }
+
       await CATEGORY.findByIdAndDelete(categoryId)
 
 
@@ -229,3 +243,9 @@ export const deleteCategory = async (req, res, next) => {
       next(err);
     }
   };
+
+
+
+
+
+  

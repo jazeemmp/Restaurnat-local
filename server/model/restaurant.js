@@ -18,13 +18,17 @@ const restaurantSchema = new mongoose.Schema(
         phone3: { type: String  ,default:null},
         email: { type: String },
         logo: { type: String ,default:null },
+        trn:{ type:String, default:null  },
         openingTime: { type: String ,default:null },
         closingTime: { type: String ,default:null },
         vatPercentage: { type: Number , default:null },
         currency: { type: String ,default:null },
         currencySymbol: { type: String,default:null },
+              isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
 
     },
+    
     { timestamps: true }
 );
 

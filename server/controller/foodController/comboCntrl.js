@@ -106,6 +106,7 @@ export const createCompo = async (req,res,next)=>{
                      mainItem: item.mainItem,
                      additionalPrice: item.additionalPrice || 0,
                      qty:item.qty || 1,
+                     price:item.price,
                      portionId: item.portionId,
                      pieceCount: null,
                      singlePieceRate: null,
@@ -116,6 +117,7 @@ export const createCompo = async (req,res,next)=>{
                      mainItem: item.mainItem,
                      additionalPrice: item.additionalPrice || 0,
                      qty:item.qty || 1,
+                     price:item.price,
                      portionId: null,
                      pieceCount: item.pieceCount,
                      singlePieceRate: item.singlePieceRate,
@@ -130,7 +132,9 @@ export const createCompo = async (req,res,next)=>{
                       foodItems : processedItems,
                       restaurantId,
                       createdById: user._id,
-                      createdBy: user.name,
+                      createdBy:user.name,
+                      isSynced:false,
+                 
                })
 
                comboGroupIds.push(createdGroup._id)
@@ -165,6 +169,7 @@ export const createCompo = async (req,res,next)=>{
             comboPrice,
             createdById:user._id,
             createdBy:user.name,
+            isSynced:false,
           })
           
 
@@ -276,6 +281,7 @@ export const createCompo = async (req,res,next)=>{
               mainItem: item.mainItem,
               additionalPrice: item.additionalPrice || 0,
                qty:item.qty || 1,
+               price:item.price,
               portionId: item.portionId,
               pieceCount: null,
               singlePieceRate: null,
@@ -286,6 +292,7 @@ export const createCompo = async (req,res,next)=>{
               mainItem: item.mainItem,
               additionalPrice: item.additionalPrice || 0,
                qty:item.qty || 1,
+               price:item.price,
               portionId: null,
               pieceCount: item.pieceCount,
               singlePieceRate: item.singlePieceRate,
@@ -300,7 +307,9 @@ export const createCompo = async (req,res,next)=>{
           foodItems: processedItems,
           restaurantId,
           createdById: user._id,
-          createdBy: user.name,
+          createdBy:user.name,
+          isSynced:false,
+        
         });
   
         comboGroupIds.push(createdGroup._id);
@@ -318,6 +327,9 @@ export const createCompo = async (req,res,next)=>{
       existingCombo.comboPrice = comboPrice;
       existingCombo.createdById = user._id;
       existingCombo.createdBy = user.name;
+      existingCombo.isSynced = false;
+    
+ 
       await existingCombo.save();
 
       console.log(existingCombo,'exist')
@@ -673,6 +685,10 @@ export const createCompo = async (req,res,next)=>{
   };
 
 
+
+
+
+
   export const deleteCombo = async (req, res, next) => {
     try {
       const { comboId } = req.params;
@@ -691,6 +707,13 @@ export const createCompo = async (req,res,next)=>{
       if (!combo) {
         return res.status(404).json({ message: "Combo not found!" });
       }
+
+    //  Check: comboId used in orders
+    const usedInOrders = await ORDER.exists({ "items.comboId": comboId });
+    if (usedInOrders) {
+      return res.status(400).json({ message: "Cannot delete this combo. It is used in orders." });
+    }
+
   
       await COMBO.findByIdAndDelete(comboId)
   

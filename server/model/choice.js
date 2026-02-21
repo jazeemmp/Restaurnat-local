@@ -5,7 +5,12 @@ const choiceSchema = new mongoose.Schema(
     name: { type: String },
     restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: "Restaurant", required: true },
     createdById: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    createdBy: String,
+      createdBy: {
+          type:String,
+      },
+            isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+    
 
   },
   {

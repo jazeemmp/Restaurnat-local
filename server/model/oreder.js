@@ -19,6 +19,10 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: function() { return !this.isCombo; } // Only required for non-combo items
   },
+  note:{
+    type:String,
+    default:null,
+  },
   
   // Combo-specific fields
   comboId: {
@@ -157,9 +161,29 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Placed", "Completed", "Cancelled"],
+      enum: ["Placed","Printed", "Completed", "Cancelled" ,"ReadyPickUp","OutForDelivery"],
       default: "Placed",
     },
+        deliveryDate: {
+      type: Date,
+      default:null,
+    },
+    deliveryTime: {
+      type: String, // or Date if you prefer
+      default:null,
+    },
+     location: {
+      type: String, // or Date if you prefer
+      default:null,
+    },
+    riderId:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Rider",
+      default:null
+    },
+    pickupTime:  { type: Date },
+    deliveredTime: { type: Date },
+    
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurant",
@@ -170,9 +194,13 @@ const orderSchema = new mongoose.Schema(
             ref: 'User',
             required: true, // CompanyAdmin or BranchAdmin who created it
         },
-        createdBy:{
-            type:String,
-        },
+          createdBy: {
+          type:String,
+      },
+
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+       
   },
   { timestamps: true }
 );

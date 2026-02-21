@@ -6,7 +6,9 @@ import UserRouter from './routes/UserRouter.js'
 import dotenv from 'dotenv';
 import {  attachSocketToRequest } from './middleware/attachSocket.js';
 import { initSocketServer}  from './config/socket.js'
-
+import { syncAccounts, syncCategory, syncCombo, syncComboGroup, syncCustomer, syncCustomerTypes, syncDividend, syncExpense, syncFloors, syncFood, syncIngredients, syncKitchen, syncMenuType, syncOrders, syncPartner, syncPaymnetRecords, syncPurchase, syncRestaurant, syncRider, syncSupplier, syncTables, syncTransaction, syncUser, synNormalUser } from "./sync/syncWorker.js";
+import { startCallerIdListener } from './config/callerIdListner.js'
+import fs from 'fs';
 
 
 
@@ -46,9 +48,36 @@ app.use((err, req, res, next) => {
   try {
     await connectDB();
 
-    
+    setInterval(syncUser, 60 * 1000);
+    setInterval(syncRestaurant, 60 * 1000)
+    setInterval(syncCustomerTypes, 60 * 1000)
+    setInterval(syncFloors, 60 * 1000)
+    setInterval(syncTables, 60 * 1000)
+    setInterval(syncKitchen, 60 * 1000)
+    setInterval(synNormalUser, 60 * 1000)
+    setInterval(syncCategory, 60 * 1000)
+    setInterval(syncMenuType, 60 * 1000)
+    setInterval(syncFood, 60 * 1000);
+    setInterval(syncCombo, 60 * 1000)
+    setInterval(syncComboGroup, 60 * 1000)
+    setInterval(syncCustomer, 60 * 1000)
+    setInterval(syncOrders, 60 * 1000)
+    setInterval(syncPaymnetRecords, 60 * 1000)
+    setInterval(syncTransaction, 60 * 1000)
+    setInterval(syncAccounts, 60 * 1000)
+    setInterval(syncSupplier, 60 * 1000)
+    setInterval(syncIngredients, 60 * 1000)
+    setInterval(syncPurchase, 60 * 1000)
+    setInterval(syncExpense, 60 * 1000)
+    setInterval(syncRider, 60 * 1000)
+    setInterval(syncPartner, 60 * 1000)
+    setInterval(syncDividend, 60 * 1000)
+
+
     const httpServer = http.createServer(app);
     await initSocketServer(httpServer)
+
+    startCallerIdListener();
 
 
     httpServer.listen(port, "0.0.0.0", () => {
@@ -57,4 +86,4 @@ app.use((err, req, res, next) => {
   } catch (error) {
     console.error(" App failed to start:", error);
   }
-})();
+})(); 

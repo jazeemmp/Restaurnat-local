@@ -5,134 +5,122 @@ import CATEGORY from '../../model/category.js'
 import FOOD from '../../model/food.js'
 import CUSTOMER_TYPE from '../../model/customerTypes.js';
 import ORDER from '../../model/oreder.js';
-import COMBO from '../../model/combo.js'
+import COMBO from '../../model/combo.js';
 import CUSTOMER from '../../model/customer.js';
 import PAYMENT from '../../model/paymentRecord.js'
 import { getIO  } from "../../config/socket.js";
 import ACCOUNTS from '../../model/account.js'
+import TRANSACTION from '../../model/transaction.js'
+import PURCHASE from '../../model/purchase.js';
+import EXPENSE from '../../model/expense.js'
+import moment from "moment-timezone";
 
 
 
 
-export const getQuickViewDashboard = async(req,res,next)=>{
-    try {
+export const getQuickViewDashboard = async (req, res, next) => {
+  try {
+    const user = await USER.findById(req.user).lean();
+    if (!user) {
+      return res.status(400).json({ message: "User not found!" });
+    }
+    const { fromDate, toDate } = req.params;
+  
+    const start = fromDate ? new Date(fromDate) : new Date("2000-01-01");
+    const end = toDate ? new Date(toDate) : new Date();
+    end.setHours(23, 59, 59, 999);
 
-          const { fromDate, toDate } = req.params;
+    const totalOrders = await ORDER.countDocuments({
+  status: "Completed",
+  createdAt: { $gte: start, $lte: end }
+});
 
-          console.log(fromDate,toDate,'form date and to date');
-
-        const userId = req.user 
-
-        const user = await USER.findOne({ _id: userId }).lean();
-        if (!user) return res.status(400).json({ message: "User not found" });
-
-        // 1. Get all completed orders in the date range
-
-             const start = new Date(fromDate);
-            const end = new Date(toDate);
-    
-
-    const completedOrders = await ORDER.find({
-        status: "Completed",
-        createdAt: { $gte: start, $lte: end }
-        }).select("_id customerTypeId");
-
-       
-      const orderIds = completedOrders.map(order => order._id);
-
-    // 2. Create a mapping of customerTypeId => readable name
-    const customerTypes = await CUSTOMER_TYPE.find();
-    const customerTypeMap = new Map();
-    customerTypes.forEach(ct => {
-      customerTypeMap.set(ct._id.toString(), ct.type); // e.g., "Dine-In"
-    });
-
-
-  // 3. Aggregate total sales by customerType using Payment
-                    
-    const payments = await PAYMENT.aggregate([
-      {
-        $match: {
-          orderId: { $in: orderIds },
-          createdAt: { $gte: start, $lte: end }
-        }
-      },
-      {
-        $lookup: {
-          from: "orders",
-          localField: "orderId",
-          foreignField: "_id",
-          as: "orderInfo"
-        }
-      },
-      { $unwind: "$orderInfo" },
-      {
-        $group: {
-          _id: "$orderInfo.customerTypeId",
-          total: { $sum: "$grandTotal" },
-          count: { $sum: 1 }
-        }
-      }
+    // === Sales (Revenue) ===
+    const paymentsAgg = await PAYMENT.aggregate([
+      { $match: { createdAt: { $gte: start, $lte: end } } },
+      { $group: { _id: null, totalBeforeVAT: { $sum: "$beforeVat" } } }
     ]);
+    const revenue = paymentsAgg[0]?.totalBeforeVAT || 0;
 
+    // === Purchases (COGS) ===
+    const purchasesAgg = await PURCHASE.aggregate([
+      { $match: { createdAt: { $gte: start, $lte: end } } },
+      { $group: { _id: null, totalCOGS: { $sum: "$totalBeforeVAT" } } }
+    ]);
+    const totalPurchase = purchasesAgg[0]?.totalCOGS || 0;
 
-    let totalSales = 0;
-    let totalOrders = 0;
+    // === Expenses ===
+    const expenseDocs = await EXPENSE.find({
+      createdAt: { $gte: start, $lte: end }
+    }).lean();
 
-    const typeWiseData = new Map();
+    let totalExpenses = 0;
+    let expenseBreakdown = {};
 
-    // Store actual results in map first
-    payments.forEach((p) => {
-      const type = customerTypeMap.get(p._id.toString()) || "Unknown";
-      typeWiseData.set(type, {
-        sales: parseFloat(p.total.toFixed(2)),
-        orders: p.count,
-      });
+    for (const exp of expenseDocs) {
+      for (const item of exp.expenseItems) {
+        const account = await ACCOUNTS.findById(item.accountId).lean();
+        if (!account) continue;
 
-      totalSales += p.total;
-      totalOrders += p.count;
-    });
+        const accountName = account.accountName;
+        const amount = Number(item.baseTotal) || 0;
 
-    const breakdown = [];
-
-    // Now make sure all customer types are included (even if 0)
-    customerTypeMap.forEach((type, id) => {
-      if (typeWiseData.has(type)) {
-        breakdown.push({
-          name: type,
-          sales: typeWiseData.get(type).sales,
-          orders: typeWiseData.get(type).orders,
-        });
-      } else {
-        breakdown.push({
-          name: type,
-          sales: 0,
-          orders: 0,
-        });
+        if (!expenseBreakdown[accountName]) {
+          expenseBreakdown[accountName] = 0;
+        }
+        expenseBreakdown[accountName] += amount;
+        totalExpenses += amount;
       }
-    });
+    }
 
-    // Add totals first
+    // === Calculations ===
+    const grossProfit = revenue - totalPurchase;
+    const netProfit = grossProfit - totalExpenses;
+
+    // === Response in requested format ===
     const data = [
       {
         name: "Total Sales",
-        sales: parseFloat(totalSales.toFixed(2)),
+        sales: revenue ? parseFloat(revenue.toFixed(2)) : 0,
         orders: null,
       },
       {
-        name: "Total Orders",
-        sales: null,
-        orders: totalOrders,
+        name: "Total Purchase",
+        sales: totalPurchase ? parseFloat(totalPurchase.toFixed(2)) : 0,
+        orders: null,
       },
-      ...breakdown,
-    ]; 
+      {
+        name: "Total Expenses",
+        sales: totalExpenses ? parseFloat(totalExpenses.toFixed(2)) : 0,
+        orders: null,
+      },
+      {
+        name: "Gross Profit",
+        sales: grossProfit ? parseFloat(grossProfit.toFixed(2)) : 0,
+        orders: null,
+      },
+      {
+        name: "Net Profit",
+        sales: netProfit ? parseFloat(netProfit.toFixed(2)) : 0,
+        orders: null,
+      },
+            {
+          name: "Total Orders",
+          sales: null,
+          orders: totalOrders || 0,
+        }
+    ];
 
-   return res.status(200).json(data);
-        
-    } catch (err) {
-        next(err)
-    }
-}
+    return res.status(200).json({
+      fromDate,
+      toDate,
+      data,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
 
 
 
@@ -161,35 +149,6 @@ export const getSalesOverview = async(req,res,next)=>{
       customerTypeMap.set(ct._id.toString(), ct.type);
     });
 
-    //     const payments = await PAYMENT.aggregate([
-    //   {
-    //     $match: {
-    //       createdAt: {
-    //         $gte: start,
-    //         $lte: end
-    //       }
-    //     }
-    //   },
-    //   {
-    //     $lookup: {
-    //       from: "orders",
-    //       localField: "orderId",
-    //       foreignField: "_id",
-    //       as: "orderInfo"
-    //     }
-    //   },
-    //   { $unwind: "$orderInfo" },
-    //   {
-    //     $group: {
-    //       _id: {
-    //         date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-    //         customerTypeId: "$orderInfo.customerTypeId"
-    //       },
-    //       total: { $sum: "$grandTotal" }
-    //     }
-    //   }
-    // ]);
-
         // Step 1: Prepare sales map from DB
        const payments = await PAYMENT.aggregate([
       {
@@ -211,7 +170,7 @@ export const getSalesOverview = async(req,res,next)=>{
       { $unwind: "$orderInfo" },
       {
         $project: {
-          grandTotal: 1,
+          beforeVat: 1,
           createdAt: 1,
           customerTypeId: "$orderInfo.customerTypeId",
           date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -240,10 +199,12 @@ export const getSalesOverview = async(req,res,next)=>{
             slot: "$slot",
             customerTypeId: "$customerTypeId",
           },
-          total: { $sum: "$grandTotal" },
+          total: { $sum: "$beforeVat" },
         },
       },
     ]);
+
+
         // Format result
     const groupedMap = new Map();
 
@@ -255,7 +216,7 @@ export const getSalesOverview = async(req,res,next)=>{
   const slotStartHour = slot.split(":")[0];
 
   // Create timestamp with both date + slot hour
-  const timestamp = new Date(`${date}T${slotStartHour.padStart(2, '0')}:00:00.000Z`);
+const timestamp = new Date(`${date}T${slotStartHour.padStart(2, '0')}:00:00`)
 
   const key = `${date}-${slot}`;
 
@@ -288,10 +249,6 @@ export const getSalesOverview = async(req,res,next)=>{
     }
 }
 
-
-
-
-
 export const getPaymentOverview = async(req,res,next)=>{
     try {
 
@@ -305,7 +262,7 @@ export const getPaymentOverview = async(req,res,next)=>{
             const end = new Date(toDate);
 
     //  Fetch all account names that can appear as payment methods
-    const accounts = await ACCOUNTS.find().select("accountName -_id").lean();
+    const accounts = await ACCOUNTS.find({showInPos:true}).select("accountName -_id").lean();
     const expectedMethods = accounts.map((acc) => acc.accountName);
 
         const payments = await PAYMENT.aggregate([
@@ -424,6 +381,7 @@ export const getOrderSummary = async(req,res,next)=>{
 
 }
 
+
 export const getTopSellingItems = async(req,res,next)=>{
     try {
 
@@ -463,19 +421,28 @@ export const getTopSellingItems = async(req,res,next)=>{
           }
 
           //  Count nested food items inside combo (only for count, not price)
-          if (item.items && Array.isArray(item.items)) {
-            for (const nestedItem of item.items) {
-              if (nestedItem.foodId) {
-                const foodId = nestedItem.foodId.toString();
-                const nestedQty = (nestedItem.qty || 1) * comboQty;;
+                    if (item.items && Array.isArray(item.items)) {
+              for (const nestedItem of item.items) {
+                if (nestedItem.foodId) {
+                  const foodId = nestedItem.foodId.toString();
+                  const nestedQty = (nestedItem.qty || 1) * comboQty;
+                  const nestedTotal = (nestedItem.total || 0) * comboQty;
 
-                foodCountMap.set(
-                  foodId,
-                  (foodCountMap.get(foodId) || 0) + nestedQty
-                );
+                  // Count
+                  foodCountMap.set(
+                    foodId,
+                    (foodCountMap.get(foodId) || 0) + nestedQty
+                  );
+
+                  // Sales
+                  foodSalesMap.set(
+                    foodId,
+                    (foodSalesMap.get(foodId) || 0) + nestedTotal
+                  );
+                }
               }
             }
-          }
+
         } else {
           //  Direct food item
           const foodId = item.foodId?.toString();
@@ -519,8 +486,8 @@ export const getTopSellingItems = async(req,res,next)=>{
       const finalTopFoods = topFoodIds.map(([id]) => {
         const food = foodMap.get(id);
         return {
-          name: food?.foodName || "null",
-          category: food?.categoryId?.name || "null",
+          name: food?.foodName || null,
+          category: food?.categoryId?.name || null,
           image: food?.image || null,
           itemsSold: foodCountMap.get(id) || 0,
           totalSale: parseFloat((foodSalesMap.get(id) || 0).toFixed(2)),
@@ -529,16 +496,16 @@ export const getTopSellingItems = async(req,res,next)=>{
 
       const comboMap = new Map();
       topCombos.forEach(combo => comboMap.set(combo._id.toString(), combo));
-
       const finalTopCombos = topComboIds.map(([id]) => {
         const combo = comboMap.get(id);
         return {
-          name: combo?.comboName || "null",
+          name: combo?.comboName || null,
           image: combo?.image || null,
           itemsSold: comboCountMap.get(id) || 0,
           totalSale: parseFloat((comboSalesMap.get(id) || 0).toFixed(2)),
         };
       });
+
 
     // 6. Return response
     return res.status(200).json({
@@ -560,14 +527,15 @@ export const getLatestCompletedOrders = async (req, res, next) => {
     const user = await USER.findById(userId);
     if (!user) return res.status(400).json({ message: "User not found" });
 
+    // Fetch more than 10 to allow filtering and grouping
     const payments = await PAYMENT.find()
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(100)
       .populate({
         path: "orderId",
         select: "order_id tableId customerTypeId",
         populate: [
-          { path: "tableId", select: "name" },
+          { path: "tableId", select: "tableNo name" },
           { path: "customerTypeId", select: "type" }
         ]
       })
@@ -577,21 +545,7 @@ export const getLatestCompletedOrders = async (req, res, next) => {
       })
       .lean();
 
-    const latestOrders = payments.map(payment => {
-      const paymentTypes = payment.methods.map(method => method.accountId?.accountName).filter(Boolean);
-
-      return {
-        order_id: payment.orderId?.order_id || "N/A",
-        tableNo: payment.orderId?.tableId?.tableNo || "N/A",
-        customerType: payment.orderId?.customerTypeId?.type || "N/A",
-        amount: payment.grandTotal || 0,
-        paymentTypes, // array of names like ['Cash', 'UPI']
-        date: payment.createdAt
-      };
-    });
-
-
- const data = {};
+    const data = {};
 
     for (const payment of payments) {
       const order = payment.orderId;
@@ -607,7 +561,8 @@ export const getLatestCompletedOrders = async (req, res, next) => {
         order_id: order.order_id || "N/A",
         tableNo: order.tableId?.tableNo || order.tableId?.name || "N/A",
         amount: payment.grandTotal || 0,
-        paymentTypes, // e.g., ['Cash', 'UPI']
+        paid: payment.paidAmount,
+        paymentTypes,
         date: payment.createdAt,
       };
 
@@ -615,7 +570,10 @@ export const getLatestCompletedOrders = async (req, res, next) => {
         data[customerType] = [];
       }
 
-      data[customerType].push(entry);
+      // Only push if less than 10 items collected for this customerType
+      if (data[customerType].length < 10) {
+        data[customerType].push(entry);
+      }
     }
 
     return res.status(200).json(data);
@@ -623,4 +581,5 @@ export const getLatestCompletedOrders = async (req, res, next) => {
     next(err);
   }
 };
+
 

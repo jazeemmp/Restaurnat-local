@@ -16,6 +16,8 @@ const customerTypesSchema = new mongoose.Schema(
       required: true,
     },
     subMethods: [], // Only for Online
+     isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
   },
   { timestamps: true }
 );

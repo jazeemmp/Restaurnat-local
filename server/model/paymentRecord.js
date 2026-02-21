@@ -17,16 +17,18 @@ const paymentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-   receivedAmount: { 
-        type: Number 
-      },
-      changeGiven: { 
-        type: Number 
-      },
 }],
     grandTotal: { 
       type: Number, 
       required: true 
+    },
+    vatAmount: { 
+      type: Number, 
+       default:0,
+    },
+    beforeVat: { 
+      type: Number, 
+      default:0
     },
     paidAmount: { 
       type: Number, 
@@ -36,18 +38,17 @@ const paymentSchema = new mongoose.Schema({
       type: Number, 
       default: 0 
     },
-    changeAmount: { 
-      type: Number, 
-      default: 0 
-    },
        createdById: {
            type: mongoose.Schema.Types.ObjectId,
            ref: 'User',
            required: true, // CompanyAdmin or BranchAdmin who created it
        },
-       createdBy:{
-           type:String,
-       },
+         createdBy: {
+          type:String,
+      },
+            isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+      
   }, { timestamps: true });
 
 

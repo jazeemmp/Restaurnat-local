@@ -6,6 +6,7 @@ const foodItemSchema = new mongoose.Schema({
   foodId: { type: mongoose.Schema.Types.ObjectId, ref: "Food" },
   portionId: { type: mongoose.Schema.Types.ObjectId } ,
   additionalPrice: Number ,
+  price:Number,
   qty:Number,
   pieceCount: Number, 
   singlePieceRate: Number, 
@@ -26,9 +27,12 @@ const comboGroupSchema = new mongoose.Schema({
         ref: 'User',
         required: true, // CompanyAdmin or BranchAdmin who created it
     },
-    createdBy:{
-        type:String,
-    },
+      createdBy: {
+          type:String,
+      },
+            isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+ 
   
 },{
     timestamps:true

@@ -17,9 +17,13 @@ const floorSchema =new mongoose.Schema({
         ref: 'User',
          // CompanyAdmin or BranchAdmin who created it
     },
-    createdBy:{
-        type:String,
-    }
+      createdBy: {
+          type:String,
+      },
+      isSynced: { type: Boolean, default: false },
+      syncedAt: { type: Date }
+   
+  
     
 },{
     timestamps:true
